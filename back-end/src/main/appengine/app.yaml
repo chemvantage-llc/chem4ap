@@ -1,0 +1,24 @@
+runtime: java17
+instance_class: F1
+
+automatic_scaling:
+  max_instances: 5
+  
+handlers:
+
+# This handler catches all URLs
+- url: /.*
+  script: auto
+  secure: always
+  redirect_http_response_code: 301
+    
+# Map everything in the web app directory to static copies  
+- url: /webapp
+  static_dir: classes/META-INF/resources
+  require_matching_file: True
+
+# All requests to the following URLs are restricted to admins or service accounts
+- url: /(units|questions|report|admin)
+  login: admin
+  script: auto
+  

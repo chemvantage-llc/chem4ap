@@ -1,0 +1,137 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.chemvantage</groupId>
+  <artifactId>chem4ap</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <name>Chem4AP</name>
+  <description>Chem4AP by ChemVantage is an LTI tool for teaching AP Chemistry.</description>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.1.0</version>
+    <relativePath/> <!-- lookup parent from repository -->
+  </parent> 
+
+  <properties>
+    <maven.compiler.source>17</maven.compiler.source>
+    <maven.compiler.target>17</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    
+    <!-- Project-specific properties -->
+    <exec.mainClass>org.chemvantage.chem4ap.SpringbootMain</exec.mainClass>
+    <googleCloudProjectId>GCLOUD_CONFIG</googleCloudProjectId>
+  </properties>
+
+  <dependencyManagement>
+   <dependencies>
+      <dependency>
+        <groupId>com.google.cloud</groupId>
+        <artifactId>libraries-bom</artifactId>
+        <version>26.27.0</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+	
+	<!-- Spring Boot embedded web server -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  
+	<!-- Objectify 6.1.0 -->
+    <dependency>
+      <groupId>com.googlecode.objectify</groupId>
+      <artifactId>objectify</artifactId>
+      <version>6.1.0</version>
+    </dependency>
+	
+	<!-- Code for JWT and JSON -->
+	<dependency>
+      <groupId>com.auth0</groupId>
+      <artifactId>java-jwt</artifactId>
+      <version>4.4.0</version>
+	</dependency>
+	<dependency>
+      <groupId>com.auth0</groupId>
+      <artifactId>jwks-rsa</artifactId>
+      <version>0.22.1</version>
+	</dependency>
+	<dependency>
+	  <groupId>com.google.code.gson</groupId>
+	  <artifactId>gson</artifactId>
+	</dependency>
+	
+	<!-- Google Cloud Tasks -->
+	<dependency>
+      <groupId>com.google.cloud</groupId>
+      <artifactId>google-cloud-tasks</artifactId>
+    </dependency>
+    
+    <!-- SendGrid API third=party email sender trough GCP -->
+    <dependency>
+      <groupId>com.sendgrid</groupId>
+      <artifactId>sendgrid-java</artifactId>
+    </dependency>
+
+  </dependencies>
+  
+  <build>
+    <plugins>
+       <plugin>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-maven-plugin</artifactId>
+		<executions>
+          <execution>
+			<goals>
+			  <goal>repackage</goal>
+			</goals>
+		  </execution>
+		</executions>
+	  </plugin>
+      
+      <!-- Copy static resources like html files into the output jar file. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>copy-web-resources</id>
+            <phase>compile</phase>
+            <goals><goal>copy-resources</goal></goals>
+            <configuration>
+              <outputDirectory>
+                ${project.build.directory}/classes/META-INF/resources
+              </outputDirectory>
+              <resources>
+                <resource><directory>./src/main/webapp</directory></resource>
+              </resources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- App Engine plugin for deploying to the live site. -->
+      <plugin>
+        <groupId>com.google.cloud.tools</groupId>
+        <artifactId>appengine-maven-plugin</artifactId>
+        <version>2.4.4</version>
+        <configuration>
+          <projectId>GCLOUD_CONFIG</projectId>
+          <version>GCLOUD_CONFIG</version>
+        </configuration>
+      </plugin>
+      
+    </plugins>
+  </build>   
+</project>

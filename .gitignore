@@ -1,0 +1,6 @@
+# Dependencies
+/frontend/node_modules
+/backend/node_modules
+
+# Misc OS files
+.DS_Store
