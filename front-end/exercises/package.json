@@ -5,7 +5,7 @@
   "homepage": "/exercises",
   "scripts": {
     "start": "export NODE_OPTIONS=--openssl-legacy-provider && react-scripts start",
-    "build": "export BUILD_PATH=./dist && export NODE_OPTIONS=--openssl-legacy-provider && react-scripts build",
+    "build": "export BUILD_PATH=../../back-end/src/main/webapp/exercises && export NODE_OPTIONS=--openssl-legacy-provider && react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
