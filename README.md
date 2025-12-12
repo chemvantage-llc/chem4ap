@@ -106,7 +106,7 @@ mvn appengine:deploy
 
 **Local Testing:**
 ```bash
-mvn appengine:run
+mvn exec:java
 ```
 Starts the back-end at `http://localhost:8080`
 
@@ -131,7 +131,7 @@ Starts the back-end at `http://localhost:8080`
 3. **Build and run back-end locally:**
    ```bash
    cd ../../back-end
-   mvn appengine:run
+   mvn exec:java
    ```
    Runs at `http://localhost:8080`
    - Serves React front-end from `/exercises`
