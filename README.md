@@ -5,7 +5,7 @@ A full-stack chemistry learning platform with a React-based front-end exercises 
 ## Prerequisites
 
 - Node.js 16+ and npm
-- Java 11+
+- Java 21
 - Maven 3.6+
 - Google Cloud SDK (for App Engine deployment)
 
