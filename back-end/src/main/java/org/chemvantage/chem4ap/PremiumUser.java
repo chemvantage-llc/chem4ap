@@ -29,6 +29,9 @@ import com.googlecode.objectify.annotation.Index;
  */
 @Entity
 class PremiumUser {
+	/** Default constructor for Objectify ORM deserialization. */
+	PremiumUser() {}
+	
 	/** User identifier (hashed for security purposes) */
 	@Id String hashedId;
 	
@@ -46,9 +49,6 @@ class PremiumUser {
 	
 	/** External payment processor order identifier (e.g., PayPal order number) */
 	String order_id;
-	
-	/** Default constructor for Objectify ORM deserialization. */
-	public PremiumUser() {}
 	
 	/**
 	 * Creates a new PremiumUser with subscription details and persists to datastore.

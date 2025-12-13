@@ -29,37 +29,94 @@ import com.googlecode.objectify.annotation.Index;
 
 /**
  * Domain model for an AP Chemistry assignment/exercise set; persisted with Objectify.
- * Integrates with LTI 1.3 for learning management system deployment.
+ * 
+ * Assignment represents a collection of topics and questions for students to complete.
+ * Assignments are typically created from an LTI platform and include references to
+ * LTI resources for grading and roster management.
+ * 
+ * Key Features:
+ * - Automatic topic selection based on question availability (min 5 questions per topic)
+ * - LTI 1.3 integration for platform authentication and grade reporting
+ * - Assignment and Grade Services (AGS) endpoints for score submission
+ * - Names and Role Provisioning Services (NRPS) for user roster management
+ * - Validation timeout tracking to ensure assignment data currency
+ * 
+ * Each assignment is associated with:
+ * - A parent APChemUnit containing curriculum organization
+ * - One or more APChemTopics from that unit
+ * - Multiple Question entities for each topic
+ * - Student Score entities tracking individual progress
+ * 
+ * @see APChemUnit for parent curriculum unit
+ * @see APChemTopic for individual topic coverage
+ * @see Question for individual assessment items
+ * @see Score for student progress tracking
  */
 @Entity
 public class Assignment implements java.lang.Cloneable {
+	/** Minimum questions per topic required to include in assignment (ensures variety) */
 	private static final int MIN_QUESTIONS_PER_TOPIC = 5;
+	
+	/** Validation timeout: assignment considered stale after ~1 month without validation */
 	private static final long VALIDATION_TIMEOUT_MS = 2635200000L; // ~1 month
+	
+	/** Assignment type identifier for exercise questions (as opposed to exam or review content) */
+	private static final String ASSIGNMENT_TYPE_EXERCISES = "Exercises";
 
 	@Id 	Long id;
-	@Index	String platform_deployment_id;  // LTI platform deployment identifier
-	@Index	String assignmentType;          // e.g., "Exercises", "Homework"
-	@Index	String resourceLinkId;          // LTI resource link identifier
-	@Index 	Date created;                   // Assignment creation timestamp
-	@Index	String lti_ags_lineitems_url;   // LTI Assignment and Grade Services endpoint
-	@Index	String lti_ags_lineitem_url;    // LTI specific line item URL
-	@Index	Date valid;                     // Last validation timestamp
-			String lti_nrps_context_memberships_url;  // LTI Names and Role Provisioning Services URL
+	
+	/** LTI platform deployment identifier (indexed for organizational queries) */
+	@Index	String platform_deployment_id;
+	
+	/** Assignment type (indexed): "Exercises", "Homework", "Quiz", etc. */
+	@Index	String assignmentType;
+	
+	/** LTI resource link identifier (indexed for gradebook integration) */
+	@Index	String resourceLinkId;
+	
+	/** Assignment creation timestamp (indexed for chronological queries) */
+	@Index 	Date created;
+	
+	/** LTI Assignment and Grade Services (AGS) lineitems endpoint for roster/grading */
+	@Index	String lti_ags_lineitems_url;
+	
+	/** LTI specific line item URL for this assignment's grades */
+	@Index	String lti_ags_lineitem_url;
+	
+	/** Last validation timestamp (indexed for staleness detection) */
+	@Index	Date valid;
+	
+	/** LTI Names and Role Provisioning Services (NRPS) URL for user roster management */
+			String lti_nrps_context_memberships_url;
+	
+	/** Display title shown to students and instructors */
 			String title;
-	@Index	Long unitId;                    // Reference to parent APChemUnit
-			List<Long> topicIds = new ArrayList<Long>();  // Topics included in this assignment
+	
+	/** Reference to parent APChemUnit for curriculum organization (indexed) */
+	@Index	Long unitId;
+	
+	/** List of topic IDs included in this assignment (sorted for consistency) */
+			List<Long> topicIds = new ArrayList<Long>();
 			
 	/** Default no-arg constructor required by Objectify. */
 	public Assignment() {}
 	
 	/**
 	 * Constructs an assignment and auto-populates topics with sufficient question coverage.
-	 * Only topics with > 5 questions are included to ensure adequate exercise variety.
 	 * 
-	 * @param assignmentType type of assignment (e.g., "Exercises")
-	 * @param title display title
-	 * @param unitId reference to parent unit
-	 * @param platform_deployment_id LTI platform deployment ID
+	 * Automatically includes only topics that have more than the minimum required questions
+	 * (MIN_QUESTIONS_PER_TOPIC) to ensure students have adequate variety and multiple
+	 * attempts per topic. Topics are included in curriculum order.
+	 * 
+	 * The created timestamp is set to the current date/time, and the assignment is NOT
+	 * automatically persisted. The caller must save this assignment using Objectify.
+	 * 
+	 * @param assignmentType the type of assignment (e.g., "Exercises", "Homework", "Quiz")
+	 * @param title the display title shown to students and instructors
+	 * @param unitId the ID of the parent APChemUnit containing curriculum organization
+	 * @param platform_deployment_id the LTI platform deployment identifier for this instance
+	 * @throws NullPointerException if unitId refers to a non-existent unit
+	 * @see #MIN_QUESTIONS_PER_TOPIC for the minimum question threshold
 	 */
 	public Assignment(String assignmentType, String title, Long unitId, String platform_deployment_id) {
 		this.assignmentType = assignmentType;
@@ -70,7 +127,7 @@ public class Assignment implements java.lang.Cloneable {
 		APChemUnit unit = ofy().load().type(APChemUnit.class).id(unitId).now();
 		List<APChemTopic> topics = ofy().load().type(APChemTopic.class).filter("unitId",unit.id).order("topicNumber").list();
 		for (APChemTopic t: topics) {
-			int nQuestions = ofy().load().type(Question.class).filter("assignmentType","Exercises").filter("topicId",t.id).count();
+			int nQuestions = ofy().load().type(Question.class).filter("assignmentType",ASSIGNMENT_TYPE_EXERCISES).filter("topicId",t.id).count();
 			if (nQuestions > MIN_QUESTIONS_PER_TOPIC) topicIds.add(t.id);
 		}
 	}

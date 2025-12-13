@@ -15,8 +15,89 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Parent;
 
+/**
+ * Score tracks a user's performance across topics in an assignment.
+ * 
+ * This entity manages the user's progress through an assignment by:
+ * - Tracking overall progress (totalScore, maxScore)
+ * - Monitoring topic-specific performance (topicScores)
+ * - Selecting appropriate questions based on adaptive algorithms
+ * - Reporting progress back to the learning management system
+ * 
+ * Scoring Algorithm:
+ * The totalScore uses a weighted running average that responds quickly to
+ * improvements but maintains a performance floor based on the current decile.
+ *   totalScore = (150*qScore + 14*totalScore)/15
+ * 
+ * Topic Scores:
+ * Each topic is tracked separately using:
+ *   topicScore = (100*qScore + 2*topicScore)/3
+ * This increases three times faster than totalScore but caps at lower values,
+ * preventing artificial inflation.
+ * 
+ * Question Selection:
+ * The next question is selected through two stages:
+ * 1. Topic Selection: Topics with lower scores get higher probability
+ * 2. Question Type Selection: Based on totalScore quintile
+ *    - Q1: true_false and multiple_choice
+ *    - Q2: multiple_choice and fill_in_blank
+ *    - Q3: fill_in_blank and checkbox
+ *    - Q4: checkbox and numeric
+ *    - Q5: numeric only
+ * 
+ * @see Assignment for the assignment being tracked
+ * @see User for the student completing the assignment
+ * @see Question for individual assessment items
+ */
 @Entity
-public class Score {    
+public class Score {
+	/**
+	 * Weight multipliers for adaptive question selection based on topic performance gap.
+	 * Maps distance from average (0-3) to weight probability for randoming topic selection.
+	 */
+	private static final int WEIGHT_DISTANCE_0 = 8;
+	private static final int WEIGHT_DISTANCE_1 = 4;
+	private static final int WEIGHT_DISTANCE_2 = 2;
+	private static final int WEIGHT_DISTANCE_3 = 1;
+
+	/**
+	 * Numerator in the total score calculation formula:
+	 * totalScore = (TOTAL_SCORE_MULTIPLIER * qScore + TOTAL_SCORE_DENOMINATOR - 1) / TOTAL_SCORE_DENOMINATOR
+	 * This creates a weighted running average that quickly reflects improvements while respecting current level.
+	 */
+	private static final int TOTAL_SCORE_MULTIPLIER = 150;
+	
+	/**
+	 * Total score denominator - provides the weighting baseline (15).
+	 * Formula: totalScore = (150*qScore + 14*totalScore) / 15
+	 */
+	private static final int TOTAL_SCORE_DENOMINATOR = 15;
+
+	/**
+	 * Numerator in the topic score calculation formula:
+	 * topicScore = (TOPIC_SCORE_MULTIPLIER * qScore + TOPIC_SCORE_DENOMINATOR - 1) / TOPIC_SCORE_DENOMINATOR
+	 * Topic scores increase 3x faster than total scores to provide faster feedback.
+	 */
+	private static final int TOPIC_SCORE_MULTIPLIER = 100;
+	
+	/**
+	 * Total topic score denominator - provides the weighting baseline (3).
+	 * Formula: topicScore = (100*qScore + 2*topicScore) / 3
+	 */
+	private static final int TOPIC_SCORE_DENOMINATOR = 3;
+
+	/**
+	 * Maximum possible topic score before capping behavior applies.
+	 * Used in distance calculations for topic weight distribution.
+	 */
+	private static final int MAX_TOPIC_SCORE = 100;
+
+	/**
+	 * Assignment type identifier for exercise questions (as opposed to exam or review content).
+	 */
+	private static final String ASSIGNMENT_TYPE_EXERCISES = "Exercises";
+
+    
 	@Id	Long id;  // assignmentId
 	@Parent Key<User> owner;
 	int totalScore = 0;
@@ -36,6 +117,22 @@ public class Score {
 		currentQuestionId = getNewQuestionId();
 	}
 	
+	/**
+	 * Selects a weighted question difficulty based on current score quintile.
+	 * 
+	 * Questions are weighted toward the current performance level and adjacent levels,
+	 * creating focused practice with gradual progression. This implements an adaptive
+	 * algorithm that adapts question difficulty to student performance.
+	 * 
+	 * Weight mapping by distance from current quintile:
+	 * - Distance 0 (current level): weight = 8 (primary focus)
+	 * - Distance 1 (±1 quintile): weight = 4 (secondary focus)  
+	 * - Distance 2 (±2 quintile): weight = 2 (occasional challenge)
+	 * - Distance 3 (±3 quintile): weight = 1 (rare stretching)
+	 * 
+	 * @param score the student's current total score (0-100)
+	 * @return a difficulty level (1-5) weighted by quintile-based distribution
+	 */
 	int weightedRandomQuestionType(int score) {
 		Random random = new Random();
 		
@@ -48,10 +145,10 @@ public class Score {
         for (int i = 1; i <= 5; i++) {
             int distance = Math.abs(i - quintile);
             int weight = switch (distance) {
-                case 0 -> 8;
-                case 1 -> 4;
-                case 2 -> 2;
-                case 3 -> 1;
+                case 0 -> WEIGHT_DISTANCE_0;
+                case 1 -> WEIGHT_DISTANCE_1;
+                case 2 -> WEIGHT_DISTANCE_2;
+                case 3 -> WEIGHT_DISTANCE_3;
                 default -> 0;
             };
             weights.put(i, weight);
@@ -89,33 +186,41 @@ public class Score {
 		ofy().save().entity(this).now();
 	}
 
+	/**
+	 * Updates the user's score after answering a question correctly or incorrectly.
+	 * 
+	 * Scoring Algorithm:
+	 * Total Score: Uses weighted running average that heavily weights the new score
+	 *   totalScore = (150*qScore + 14*totalScore) / 15
+	 *   - When qScore=1 (correct), increases by ~10% initially, then 3% when approaching 100
+	 *   - Score floors at the current decile (0, 10, 20, ..., 100) to prevent excessive drops
+	 *   - Maximum is capped at 100
+	 * 
+	 * Topic Score: Updates for the current topic using faster weighting
+	 *   topicScore = (100*qScore + 2*topicScore) / 3
+	 *   - Increases three times faster than totalScore
+	 *   - Provides faster feedback on topic mastery
+	 * 
+	 * Question Tracking: Records the current question to prevent skipping
+	 * 
+	 * Next Question: Selects a new question based on updated scores
+	 * 
+	 * @param user the user whose score is being updated
+	 * @param q the question that was just answered
+	 * @param qScore the question score (0 for incorrect, 1 for correct)
+	 * @throws Exception if unable to save or retrieve questions
+	 */
 	void update(User user, Question q, int qScore) throws Exception {
-		/* Algorithm for tracking topic scores and totalScore:
-		 * The totalScore is calculated as a running average
-		 *   totalScore = (150*qScore + 14*totalScore)/15;
-		 * When qScore=1, starts with 10% increase, last is 3% increase to 100.
-		 * The value of totalScore is not permitted to exceed 100
-		 * or to go below the floor of the current decile score.
-		 * 
-		 * Each topic score is also tracked separately using
-		 *   topicScore = (100*qScore + 2*topicScore)/3;
-		 * This increases three times faster, but never gets to 100
-		 * The topicScores are used to select a topic for the next question:
-		 * 
-		 * The currentQuestionId is saved so a question can't be skipped
-		 * simply by reloading the page or app.
-		 */
-		
-		// Update the totalScore:
+		// Update the totalScore using weighted running average:
 		int floor = totalScore/10*10;  // 0, 10, 20, 30,... 100
-		totalScore = (150*qScore + 14*totalScore)/15;
+		totalScore = (TOTAL_SCORE_MULTIPLIER*qScore + (TOTAL_SCORE_DENOMINATOR-1)*totalScore) / TOTAL_SCORE_DENOMINATOR;
 		if (totalScore > 100) totalScore = 100;
 		if (totalScore < floor) totalScore = floor;
 		
-		// Update the topicScore
+		// Update the topicScore using faster weighting:
 		Long topicId = q.topicId;
 		int index = topicIds.indexOf(topicId);
-		topicScores.set(index, (100*qScore + 2*topicScores.get(index))/3);
+		topicScores.set(index, (TOPIC_SCORE_MULTIPLIER*qScore + (TOPIC_SCORE_DENOMINATOR-1)*topicScores.get(index)) / TOPIC_SCORE_DENOMINATOR);
 		
 		// Select a new questionId
 		currentQuestionId = getNewQuestionId();
@@ -133,33 +238,38 @@ public class Score {
 		
 	}
 	
+	/**
+	 * Selects the next question to present to the student based on adaptive algorithm.
+	 * 
+	 * Two-Stage Selection Process:
+	 * 1. Topic Selection: Uses weighted random selection where weight equals (MAX_TOPIC_SCORE - currentTopicScore)
+	 *    - Topics with lower scores get higher selection probability
+	 *    - Focuses student practice on weaker topics
+	 *    - Falls back to equal probability if all topics are mastered
+	 * 
+	 * 2. Question Type Selection: Based on student's totalScore quintile (via weightedRandomQuestionType)
+	 *    - Question type (difficulty/format) progresses as student improves
+	 *    - Creates natural progression from simpler to more complex question types
+	 * 
+	 * Question Avoidance: Previously attempted questions are tracked in recentQuestionKeys
+	 * to prevent showing the same question twice in succession.
+	 * 
+	 * @return the unique ID of the selected question to present
+	 * @throws Exception if unable to query the database for available questions
+	 */
 	Long getNewQuestionId() throws Exception {
-		/* Algorithm for selecting the next question:
-		 * 1) Select a topic:
-		 *    Each topic gets a weight of 100-topicScore and the topic
-		 *    is selected at random from the percentages of the total weight.
-		 *    This favors topics which have low scores, either because
-		 *    few questions were presented (distribution) or because
-		 *    the student didn't answer correctly (adaptation).
-		 * 2) Select a question type:
-		 *    This is based on the totalScore by quartile:
-		 *    Q1: true_false and multiple_choice
-		 *    Q2: multiple_choice and fill_in_blank
-		 *    Q3: fill_in_blank and checkbox
-		 *    Q4: checkbox and numeric
-		 */
 		// Select a topic based on current topic scores
 		Long topicId = null;
 		int range = 0;
 		for (Long tId : topicIds) {
-			range += 100 - topicScores.get(topicIds.indexOf(tId));
+			range += MAX_TOPIC_SCORE - topicScores.get(topicIds.indexOf(tId));
 		}
 		Random random = new Random();
 		if (range > 0) {
 			int r = random.nextInt(range);
 			range = 0;
 			for (Long tId : topicIds) {
-				range += 100 - topicScores.get(topicIds.indexOf(tId));
+				range += MAX_TOPIC_SCORE - topicScores.get(topicIds.indexOf(tId));
 				if (r < range) {
 					topicId = tId;
 					break;
@@ -170,11 +280,11 @@ public class Score {
 		int questionType = weightedRandomQuestionType(totalScore);
 		
 		List<Key<Question>> questionKeys = switch (questionType) {
-			case 1 -> ofy().load().type(Question.class).filter("assignmentType","Exercises").filter("topicId",topicId).filter("type","true_false").keys().list();
-			case 2 -> ofy().load().type(Question.class).filter("assignmentType","Exercises").filter("topicId",topicId).filter("type","multiple_choice").keys().list();
-			case 3 -> ofy().load().type(Question.class).filter("assignmentType","Exercises").filter("topicId",topicId).filter("type","fill_in_blank").keys().list();
-			case 4 -> ofy().load().type(Question.class).filter("assignmentType","Exercises").filter("topicId",topicId).filter("type","checkbox").keys().list();
-			default -> ofy().load().type(Question.class).filter("assignmentType","Exercises").filter("topicId",topicId).filter("type","numeric").keys().list();		
+			case 1 -> ofy().load().type(Question.class).filter("assignmentType",ASSIGNMENT_TYPE_EXERCISES).filter("topicId",topicId).filter("type",Question.TYPE_TRUE_FALSE).keys().list();
+			case 2 -> ofy().load().type(Question.class).filter("assignmentType",ASSIGNMENT_TYPE_EXERCISES).filter("topicId",topicId).filter("type",Question.TYPE_MULTIPLE_CHOICE).keys().list();
+			case 3 -> ofy().load().type(Question.class).filter("assignmentType",ASSIGNMENT_TYPE_EXERCISES).filter("topicId",topicId).filter("type",Question.TYPE_FILL_IN_BLANK).keys().list();
+			case 4 -> ofy().load().type(Question.class).filter("assignmentType",ASSIGNMENT_TYPE_EXERCISES).filter("topicId",topicId).filter("type",Question.TYPE_CHECKBOX).keys().list();
+			default -> ofy().load().type(Question.class).filter("assignmentType",ASSIGNMENT_TYPE_EXERCISES).filter("topicId",topicId).filter("type",Question.TYPE_NUMERIC).keys().list();		
 		};
 		
 /*
