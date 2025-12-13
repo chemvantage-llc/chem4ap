@@ -1,5 +1,15 @@
 # Dependencies
 /front-end/exercises/node_modules
 
+# Maven/IDE build output
+target/
+bin/
+*.class
+
 # Misc OS files
 .DS_Store
+
+# IDE files
+.vscode/
+.idea/
+*.iml
