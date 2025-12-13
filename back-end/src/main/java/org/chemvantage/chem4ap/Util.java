@@ -98,9 +98,6 @@ public class Util {
 	/** SHA-256 algorithm name for user ID hashing */
 	private static final String HASH_ALGORITHM = "SHA-256";
 	
-	/** Charset for encoding operations (UTF-8 standard) */
-	private static final String CHARSET_NAME = "UTF-8";
-	
 	/** Cloud Tasks location for asynchronous job queue */
 	private static final String CLOUD_TASKS_LOCATION = "us-central1";
 	

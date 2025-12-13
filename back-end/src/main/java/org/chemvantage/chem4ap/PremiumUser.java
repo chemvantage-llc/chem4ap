@@ -50,8 +50,6 @@ import com.googlecode.objectify.annotation.Index;
 @Entity
 class PremiumUser {
 	// Subscription validation constants
-	/** Minimum valid subscription duration (in months) */
-	private static final int MIN_MONTHS = 1;
 	/** Calendar field for month calculation */
 	private static final int CALENDAR_FIELD_MONTH = Calendar.MONTH;
 	

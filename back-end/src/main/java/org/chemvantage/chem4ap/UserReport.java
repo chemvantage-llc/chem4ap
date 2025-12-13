@@ -46,9 +46,6 @@ import com.googlecode.objectify.annotation.Index;
 public class UserReport implements Serializable {
 	private static final long serialVersionUID = 137L;
 	
-	/** Default rating value for new reports (no star rating yet assigned) */
-	private static final int DEFAULT_STARS = 0;
-	
 	/** Unique report identifier (database key) */
 	@Id 	Long id;
 	

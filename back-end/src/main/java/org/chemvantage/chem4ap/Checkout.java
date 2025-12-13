@@ -243,12 +243,8 @@ public class Checkout extends HttpServlet {
 	private static final String PAYPAL_INTENT_CAPTURE = "CAPTURE";
 	/** Currency code for USD */
 	private static final String CURRENCY_USD = "USD";
-	/** PayPal shipping preference for no shipping */
-	private static final String SHIPPING_PREFERENCE = "NO_SHIPPING";
 	/** PayPal order status indicating completion */
 	private static final String PAYPAL_STATUS_COMPLETED = "COMPLETED";
-	/** PayPal order status indicating creation (initial state) */
-	private static final String PAYPAL_STATUS_CREATED = "CREATED";
 	
 	// JSON field names
 	/** JSON field name for access token */
@@ -309,10 +305,6 @@ public class Checkout extends HttpServlet {
 	private static final int HTTP_SUCCESS_CODE = 2;
 	/** Conversion factor from seconds to milliseconds */
 	private static final int MILLIS_PER_SECOND = 1000;
-	/** Discount calculation for 2-month option (no discount) */
-	private static final int DISCOUNT_2_MONTH = 0;
-	/** Discount calculation for 5-month option (20% discount = 1/5) */
-	private static final int DISCOUNT_5_MONTH = 3;
 	/** Discount calculation for 12-month option (33% discount = 1/3) */
 	private static final int DISCOUNT_12_MONTH = 3;
 	/** Placeholder for currency formatting */

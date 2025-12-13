@@ -185,8 +185,6 @@ public class Exercises extends HttpServlet {
 	// HTML form and table constants
 	/** HTML form method attribute for POST requests */
 	private static final String FORM_METHOD_POST = "post";
-	/** HTML form method attribute for GET requests */
-	private static final String FORM_METHOD_GET = "get";
 	/** HTML input type for hidden fields */
 	private static final String INPUT_TYPE_HIDDEN = "hidden";
 	/** HTML input type for checkbox */
@@ -219,10 +217,6 @@ public class Exercises extends HttpServlet {
 	private static final String JS_FUNC_TOPIC_CLICKED = "topicClicked";
 	/** JavaScript function name for unit checkbox click handler */
 	private static final String JS_FUNC_UNIT_CLICKED = "unitClicked";
-	/** HTML onclick handler for topic checkbox */
-	private static final String ONCLICK_TOPIC = "topicClicked";
-	/** HTML onclick handler for unit checkbox */
-	private static final String ONCLICK_UNIT = "unitClicked";
 	/** HTML onclick attribute value for synchronize button (hide on click) */
 	private static final String ONCLICK_SYNC_HIDE = "document.getElementById('syncsubmit').style='display:none';";
 	

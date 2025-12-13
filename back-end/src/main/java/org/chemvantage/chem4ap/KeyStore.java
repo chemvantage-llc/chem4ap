@@ -107,9 +107,6 @@ public class KeyStore extends HttpServlet {
 	private static final int RSA_MODULUS_BYTES = 256;
 	
 	// JWK property constants
-	/** JSON Web Key Type: RSA */
-	private static final String JWK_TYPE_RSA = "RSA";
-	
 	/** RSA signature algorithm with SHA-256: RS256 */
 	private static final String JWK_ALGORITHM = "RS256";
 	

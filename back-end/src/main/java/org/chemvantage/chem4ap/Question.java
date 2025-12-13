@@ -137,22 +137,13 @@ public class Question implements Serializable, Cloneable {
 	private static final int FORMAT_SIG_FIGS_PRECISION = 3;  // Both sig figs and precision
 	
 	// HTML/UI formatting constants
-	private static final String STYLE_ERROR_MESSAGE = "color:#EE0000;font-size: small;";
-	private static final String STYLE_GRAY_SMALL = "color: gray; font-size: 0.8em;";
 	private static final String STYLE_INSTRUCTION = "color:#EE0000;font-size: small;";
 	private static final String STYLE_PLACEHOLDER = "color: gray; font-size: 0.8em;";
 	private static final String HTML_UL_START = "<ul>";
 	private static final String HTML_UL_END = "</ul>";
 	private static final String HTML_LI_START = "<li>";
 	private static final String HTML_LI_END = "</li>";
-	private static final String HTML_BR = "<br/>";
 	private static final String HTML_BR_DOUBLE = "<br/><br/>";
-	
-	// Parameter characters
-	private static final char PARAM_A = 'a';
-	private static final char PARAM_B = 'b';
-	private static final char PARAM_C = 'c';
-	private static final char PARAM_D = 'd';
 	
 	// Decimal format patterns
 	private static final String FORMAT_SMALL_INTEGER = "0";

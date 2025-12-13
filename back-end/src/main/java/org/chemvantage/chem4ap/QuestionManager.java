@@ -179,14 +179,6 @@ public class QuestionManager extends HttpServlet {
 	// HTML/Form element constants
 	/** HTML form field: Choice A text */
 	private static final String CHOICE_A = "A";
-	/** HTML form field: Choice B text */
-	private static final String CHOICE_B = "B";
-	/** HTML form field: Choice C text */
-	private static final String CHOICE_C = "C";
-	/** HTML form field: Choice D text */
-	private static final String CHOICE_D = "D";
-	/** HTML form field: Choice E text */
-	private static final String CHOICE_E = "E";
 	/** Maximum number of answer choices */
 	private static final int MAX_CHOICES = 5;
 	/** HTML element ID: Fake element for JSON parsing */
