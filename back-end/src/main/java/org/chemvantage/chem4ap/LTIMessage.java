@@ -652,34 +652,44 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	}
 
 	static String readUserScore(Assignment a, String userId) {
+		// Validate input parameters
+		if (a == null) {
+			throw new IllegalArgumentException("Assignment cannot be null");
+		}
+		if (userId == null || userId.isEmpty()) {
+			throw new IllegalArgumentException("userId cannot be null or empty");
+		}
+		
 		// This method uses the LTIv1p3 message protocol to retrieve a user's score from the LMS.
-		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity,
+		// The lineitem URL corresponds to the LMS grade book column for the Assignment entity,
 		// and the specific cell is identified by the user_id value defined by the LMS platform
 		// This method accepts either the full ChemVantage userId or the raw LMS user_id
-		StringBuffer debug = new StringBuffer("Debug: ");
+		StringBuilder debug = new StringBuilder("Debug: ");
 		HttpURLConnection uc = null;
 		try {
-			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly";
-			String bearerAuth = "Bearer " + getAccessToken(a.domain,scope);
+			String scope = SCOPE_AGS_RESULT_READONLY;
+			String bearerAuth = "Bearer " + getAccessToken(a.platform_deployment_id, scope);
 			
-			// If necessary, convert the full ChemVantage userId (with domain and slash) to raw LMNS user_ud
+			// If necessary, convert the full ChemVantage userId (with domain and slash) to raw LMS user_id
 			int lastSlash = userId.lastIndexOf("/");  // returns -1 if no slashes (raw LMS user_id)
-			String user_id = lastSlash<0?userId:userId.substring(lastSlash+1); // stripped of the platform_id and "/"
+			String user_id = lastSlash < 0 ? userId : userId.substring(lastSlash + 1); // stripped of the platform_id and "/"
 			
-			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
+			if (a.lti_ags_lineitem_url == null) throw new Exception("the lineitem URL for this assignment is unknown");
 			
 			
 			// There is some uncertainty about the query parameter; The LTI spec is user_id but the container has userId
 			URL u = null;
-			Deployment d = ofy().load().type(Deployment.class).id(a.domain).safe();
+			Deployment d = ofy().load().type(Deployment.class).id(a.platform_deployment_id).safe();
+			if (d == null) throw new Exception("Deployment not found for " + a.platform_deployment_id);
+			
 			switch (d.lms_type) {
 			case "moodle":
-				String base_url = a.lti_ags_lineitem_url.substring(0,a.lti_ags_lineitem_url.indexOf("?")) + "/results";
+				String base_url = a.lti_ags_lineitem_url.substring(0, a.lti_ags_lineitem_url.indexOf("?")) + "/results";
 				String query = a.lti_ags_lineitem_url.substring(a.lti_ags_lineitem_url.indexOf("?"));
 				u = new URL(base_url + query + "&user_id=" + user_id + "&userId=" + user_id);
 				break;
 			case "schoology":
-				u = new URL(a.lti_ags_lineitem_url + "/results?user_id=" + user_id.substring(0,user_id.indexOf(":")));
+				u = new URL(a.lti_ags_lineitem_url + "/results?user_id=" + user_id.substring(0, user_id.indexOf(":")));
 				break;
 			default:
 				u = new URL(a.lti_ags_lineitem_url + "/results?userId=" + user_id + "&user_id=" + user_id);				
@@ -703,10 +713,10 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				debug.append("3");
 				
 				Iterator<JsonElement> iterator = json.iterator();
-				while(iterator.hasNext()){
+				while(iterator.hasNext()) {
 					JsonObject result = iterator.next().getAsJsonObject();
 					if (result.get("userId").getAsString().equals(user_id)) {
-						return String.valueOf(Math.round(1000.*result.get("resultScore").getAsDouble()/result.get("resultMaximum").getAsDouble())/10.);
+						return String.valueOf(Math.round(1000. * result.get("resultScore").getAsDouble() / result.get("resultMaximum").getAsDouble()) / 10.);
 					}
 				}
 				return "no score found: " + json.toString();
@@ -721,8 +731,8 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 				return "response code=" + responseCode + " for " + u.toString() + "<br/>" + json.toString(); 
 			}
 		} catch (Exception e) {
-			
-			return (e.getMessage()==null?e.toString():e.getMessage()) + "<br/>" + debug.toString();
+			System.err.println("Error reading user score for assignment " + a.id + ": " + e.getMessage());
+			return (e.getMessage() == null ? e.toString() : e.getMessage()) + "<br/>" + debug.toString();
 		}
 	}
 	
