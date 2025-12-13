@@ -683,44 +683,27 @@ public class Exercises extends HttpServlet {
 			throw new Exception("Error: Your LMS is not configured for this operation.");
 		}
 
-Map<String, String> scores = LTIMessage.readMembershipScores(a);
-		if (scores == null || scores.size() == 0) {
-			throw new Exception("Unable to read scores from LMS");
-		}
-		Map<String, String[]> membership = LTIMessage.getMembership(a);
-		if (membership == null || membership.size() == 0) {
-			throw new Exception("No class members found in LMS");
-		}
-		Map<String, Key<Score>> keys = new HashMap<>();
+		Map<String,String> scores = LTIMessage.readMembershipScores(a);
+		if (scores==null || scores.size()==0) throw new Exception();  // this only works if we can get info from the LMS
+		Map<String,String[]> membership = LTIMessage.getMembership(a);
+		if (membership==null || membership.size()==0) throw new Exception();  // there must be some members of this class
+		Map<String,Key<Score>> keys = new HashMap<String,Key<Score>>();
 		Deployment d = ofy().load().type(Deployment.class).id(a.platform_deployment_id).safe();
-		if (d == null) {
-			throw new Exception("Deployment not found");
-		}
-		String platformId = d.getPlatformId();
-		if (platformId == null) {
-			throw new Exception("Cannot determine platform ID");
-		}
-		String platform_id = platformId + "/";
+		String platform_id = d.getPlatformId() + "/";
 		for (String id : membership.keySet()) {
 			String hashedUserId = Util.hashId(platform_id + id);
-			keys.put(id, key(key(User.class, hashedUserId), Score.class, a.id));
+			keys.put(id,key(key(User.class,hashedUserId),Score.class,a.id));
 		}
-		Map<Key<Score>, Score> cvScores = ofy().load().keys(keys.values());
-		for (Map.Entry<String, String[]> entry : membership.entrySet()) {
-			if (entry == null) {
-				continue;
-			}
+		Map<Key<Score>,Score> cvScores = ofy().load().keys(keys.values());
+		for (Map.Entry<String,String[]> entry : membership.entrySet()) {
+			if (entry == null) continue;
 			Score cvScore = cvScores.get(keys.get(entry.getKey()));
-			if (cvScore == null) {
-				continue;
-			}
+			if (cvScore==null) continue;
 			String s = scores.get(entry.getKey());
-			if (String.valueOf(cvScore.maxScore).equals(s)) {
-				continue;
-			}
-			Util.createTask("/report", "AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(platform_id + entry.getKey(), "UTF-8"));
+			if (String.valueOf(cvScore.maxScore).equals(s)) continue;  // the scores match (good!)
+			Util.createTask("/report","AssignmentId=" + a.id + "&UserId=" + URLEncoder.encode(platform_id + entry.getKey(),"UTF-8"));
 		}
-		return instructorPage(user, a);
+		return instructorPage(user,a);
 	}
 }
 
