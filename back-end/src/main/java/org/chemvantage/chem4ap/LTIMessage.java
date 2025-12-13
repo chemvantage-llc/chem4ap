@@ -19,6 +19,29 @@ package org.chemvantage.chem4ap;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+/**
+ * Utility class for LTI 1.3 compliance messaging and grade synchronization.
+ * 
+ * This class provides static methods for managing OAuth 2.0 token flows with LMS platforms,
+ * retrieving line items from the grade book, reading and posting user scores, and retrieving
+ * class membership information. Supports Canvas, Brightspace/D2L, Moodle, and Schoology.
+ * 
+ * Key features:
+ * - OAuth 2.0 token caching with expiration validation
+ * - RSA256 JWT signing for platform authentication
+ * - LTI AGS (Assignment and Grade Services) for grade synchronization
+ * - LTI NRPS (Names and Role Provisioning Services) for membership retrieval
+ * - Platform-specific URL handling and query parameter construction
+ * 
+ * Methods:
+ * - getAccessToken(): Obtain cached or fresh OAuth access tokens
+ * - getLineItem(): Retrieve grade book line items
+ * - getMembership(): Fetch class roster with pagination support
+ * - postUserScore(): Submit grades to the LMS
+ * - readUserScore(): Retrieve existing scores from the grade book
+ * - readMembershipScores(): Retrieve all user scores for an assignment
+ */
+
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -46,26 +69,48 @@ import com.google.gson.JsonParser;
 
 public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+JSON" messages to a Tool Consumer (LMS)
 	
+	// OAuth token validity and caching constants (milliseconds)
+	private static final long TOKEN_CACHE_GRACE_MS = 300000L;  // 5 minutes: reuse token if valid beyond this time
+	private static final long TOKEN_REQUESTED_VALIDITY_MS = 900000L;  // 15 minutes: request token valid for this duration
+	private static final int HTTP_CONNECT_TIMEOUT_MS = 15000;  // 15 seconds: HTTP connection timeout
+	
+	// LTI 1.3 OAuth scope URIs
+	private static final String SCOPE_AGS_LINEITEM = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
+	private static final String SCOPE_AGS_LINEITEM_READONLY = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly";
+	private static final String SCOPE_AGS_RESULT_READONLY = "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly";
+	private static final String SCOPE_AGS_SCORE = "https://purl.imsglobal.org/spec/lti-ags/scope/score";
+	private static final String SCOPE_NRPS_MEMBERSHIP_READONLY = "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
+	
 	static Map<String,String> authTokens = new HashMap<String,String>();
 	
 	static String getAccessToken(String platformDeploymentId,String scope) throws IOException {
+		// Validate input parameters
+		if (platformDeploymentId == null || platformDeploymentId.isEmpty()) {
+			throw new IllegalArgumentException("platformDeploymentId cannot be null or empty");
+		}
+		if (scope == null || scope.isEmpty()) {
+			throw new IllegalArgumentException("scope cannot be null or empty");
+		}
 		
 		// First, try to retrieve an appropriate authToken from the class variable HashMap authTokens
 		// If the token expires more than 5 minutes from now, use it. Otherwise, request a new one.
 		Deployment d = null;
 		Date now = new Date();
-		Date in5Min = new Date(now.getTime() + 300000L);  // 5 minutes from now
-		Date in15Min = new Date(now.getTime() + 900000L);  // 15 minutes from now
-		StringBuffer debug = new StringBuffer("Failed LTIMessage.getAccessToken()<br/>");
+		Date in5Min = new Date(now.getTime() + TOKEN_CACHE_GRACE_MS);
+		Date in15Min = new Date(now.getTime() + TOKEN_REQUESTED_VALIDITY_MS);
+		StringBuilder debug = new StringBuilder("Failed LTIMessage.getAccessToken()<br/>");
 		
 		DataOutputStream wr = null;
 		BufferedReader reader = null;
 		try {
 			d = Deployment.getInstance(platformDeploymentId);
-			if (d==null) debug.append("Chem4AP Deployment unknown<br/>");
-			else debug.append("Deployment: " + d.platform_deployment_id + " (" + d.org_url + ")<br/>");
+			if (d == null) {
+				debug.append("Chem4AP Deployment unknown<br/>");
+				return "Failed AuthToken Request: Deployment not found for " + platformDeploymentId;
+			}
+			debug.append("Deployment: " + d.platform_deployment_id + " (" + d.org_url + ")<br/>");
 			
-			if (!d.scope.contains(scope)) return null;  // must be authorized
+			if (d.scope == null || !d.scope.contains(scope)) return null;  // must be authorized
 			debug.append("Scope OK.<br/>");
 			
 			String authToken = authTokens.get(platformDeploymentId);

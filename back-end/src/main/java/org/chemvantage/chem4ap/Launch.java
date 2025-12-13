@@ -37,7 +37,6 @@ public class Launch extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	private static final long LAUNCH_TOKEN_VALIDITY_MS = 604800000L;  // 7 days in milliseconds
 	private static final String EMAIL_REGEX = "^[A-Za-z0-9+_.-]+@(.+)$";
-	private static final String CHEM4AP_URL = "/launch";
 	private static final String ASSIGNMENTS_TYPE = "Exercises";
 	
 	/**
