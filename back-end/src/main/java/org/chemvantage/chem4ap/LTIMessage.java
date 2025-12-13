@@ -228,6 +228,11 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     }
     
     static Map<String,String[]> getMembership(Assignment a) {
+    	// Validate input parameter
+    	if (a == null) {
+    		throw new IllegalArgumentException("Assignment cannot be null");
+    	}
+    	
     	// This method uses the LTIv1p3 message protocol to retrieve the group membership from the LMS.
     	// If this service is offered by providing the endpoint, the Json array MUST contain the user_id and roles
     	// values, but may also include other fields such as name, given_name, middle_name, family_name, email, ...
@@ -235,7 +240,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     	String bearerAuth = null;
 
     	try {
-    		String scope = "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
+    		String scope = SCOPE_NRPS_MEMBERSHIP_READONLY;
     		if ((bearerAuth=getAccessToken(a.platform_deployment_id,scope)).startsWith("response")) throw new Exception("the LMS failed to issue an auth token: " + bearerAuth);
     		else bearerAuth = "Bearer " + bearerAuth;
 
@@ -286,12 +291,28 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     				}
     			} else return null; 
     			next_url = null;
-    			try {  // per LTI NPRS specs, this section looks for a HttpLink to the next page of results
-    				String[] links = uc.getHeaderField("Link").split(",");  // splits comma-separated list of Links
-    				for (String l : links) if (l.contains("next")) next_url = l.substring(l.indexOf("<")+1,l.indexOf(">")); // url is enclosed in <>
-    			} catch (Exception e2) {}
+    		try {  // per LTI NRPS specs, this section looks for an HttpLink to the next page of results
+    			String linkHeader = uc.getHeaderField("Link");
+    			if (linkHeader != null) {
+    				String[] links = linkHeader.split(",");  // splits comma-separated list of Links
+    				for (String l : links) {
+    					if (l.contains("next")) {
+    						int startIdx = l.indexOf("<");
+    						int endIdx = l.indexOf(">");
+    						if (startIdx >= 0 && endIdx > startIdx) {
+    							next_url = l.substring(startIdx + 1, endIdx); // url is enclosed in <>
+    						}
+    					}
+    				}
+    			}
+    		} catch (Exception e2) {
+    			// Silently continue if Link header parsing fails
     		}
-    	} catch (Exception e) {	
+    		}
+    	} catch (Exception e) {
+    		// Log error instead of silently failing
+    		System.err.println("Error retrieving membership for assignment " + (a != null ? a.id : "unknown") + ": " + e.getMessage());
+    		e.printStackTrace();
     	}
     	return membership;
     }
@@ -307,7 +328,7 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/score";
 			buf.append("AssignmentId=" + (a==null?"unknown":a.id) + "<br/>");
 
-			String authToken = getAccessToken(a.platform_deployment_id,scope);
+			String authToken = getAccessToken(a != null ? a.platform_deployment_id : null, scope);
 			buf.append("AuthToken:" + authToken + "<br/>");
 
 			if (authToken.startsWith("Failed")) throw new Exception("Failed: could not get access token. " + authToken);
@@ -679,14 +700,22 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	}
 	
 	static String postUserScore(Score s, String userId) throws Exception {
-		// This method uses the LTIv1p3 message protocol to post a user's score to the LMS grade book.
-		// The lineitem URL corresponds to the LMS grade book column for the Assignment entity,
-		// and the specific cell is identified by the user_id value defined by the LMS platform
+    	// Validate input parameters
+    	if (s == null) {
+    		throw new IllegalArgumentException("Score cannot be null");
+    	}
+    	if (userId == null || userId.isEmpty()) {
+    		throw new IllegalArgumentException("userId cannot be null or empty");
+    	}
+    	
+    	// This method uses the LTIv1p3 message protocol to post a user's score to the LMS grade book.
+    	// The lineitem URL corresponds to the LMS grade book column for the Assignment entity,
+    	// and the specific cell is identified by the user_id value defined by the LMS platform
 
-		StringBuffer buf = new StringBuffer("PostUserScoreDebug:");
-		try {
-			Assignment a = ofy().load().type(Assignment.class).id(s.assignmentId).safe();
-			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/score";
+    	StringBuilder buf = new StringBuilder("PostUserScoreDebug:");
+    	try {
+    		Assignment a = ofy().load().type(Assignment.class).id(s.assignmentId).safe();
+    		String scope = SCOPE_AGS_SCORE;
 			buf.append("AssignmentId=" + (a==null?"unknown":a.id) + "<br/>");
 
 			String authToken = getAccessToken(a.domain,scope);
