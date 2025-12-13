@@ -28,41 +28,76 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
+/**
+ * Nonce (Number Used Once) represents a unique, one-time use value for OAuth security.
+ * 
+ * This class manages nonce values used in OAuth 1.0 and LTI authentication flows to protect
+ * against eavesdropping and replay attacks. Each nonce is stored in the Datastore with a 
+ * creation timestamp and is automatically expired after 90 minutes.
+ * 
+ * Usage:
+ * - generateNonce(): Creates a new unique nonce string
+ * - isUnique(String): Validates that a nonce hasn't been used before, stores it if valid
+ * 
+ * Security: Nonces older than the validity interval are automatically purged from the datastore
+ * to prevent database growth and ensure strict replay attack protection.
+ */
 @Entity
 public class Nonce {
 	@Id String id;
 	@Index	Date created;
-			
+	
+	/** Nonce validity interval: 90 minutes in milliseconds */
+	static final long NONCE_VALIDITY_INTERVAL = 5400000L;  // 90 minutes (90 * 60 * 1000)
+	
 	Nonce() {}
 	
+	/** Constructs a new Nonce with the specified id and current timestamp */
 	Nonce(String id) {
 		this.id = id;
 		this.created = new Date();
 	}
-	static long interval = 5400000L;  // 90 minutes in milliseconds
 	
+	/**
+	 * Generates a unique nonce string using two random long values converted to hexadecimal.
+	 * The resulting nonce is a 32-character hex string (2 * 16 hex chars per long).
+	 * @return a unique nonce string suitable for OAuth security operations
+	 */
 	static String generateNonce() {
-		Random random =  new Random(new Date().getTime());
-        long r1 = random.nextLong();
-        long r2 = random.nextLong();
-        String hash1 = Long.toHexString(r1);
-        String hash2 = Long.toHexString(r2);
-        return hash1 + hash2;
+		Random random = new Random(new Date().getTime());
+		long firstRandomValue = random.nextLong();
+		long secondRandomValue = random.nextLong();
+		String firstHash = Long.toHexString(firstRandomValue);
+		String secondHash = Long.toHexString(secondRandomValue);
+		return firstHash + secondHash;
 	}
 
+	/**
+	 * Verifies that a nonce value is unique and hasn't been used before.
+	 * 
+	 * If the nonce is valid and unique, it is stored in the datastore for future validation.
+	 * This method also automatically deletes all nonces older than the validity interval
+	 * to prevent database growth and ensure strict replay attack protection.
+	 * 
+	 * @param nonce the nonce string to validate for uniqueness
+	 * @return true if the nonce is unique and has been stored, false if already used
+	 * @throws IllegalArgumentException if nonce is null or empty
+	 */
 	public static boolean isUnique(String nonce) {
+		if (nonce == null || nonce.isEmpty()) throw new IllegalArgumentException("Nonce value is required and cannot be empty.");
+		
 		Date now = new Date();
-		Date oldest = new Date(now.getTime()-interval); // 90 minutes ago
+		Date oldest = new Date(now.getTime() - NONCE_VALIDITY_INTERVAL);  // 90 minutes ago
 
-		// delete all Nonce objects older than the interval
-		List<Key<Nonce>> expired = ofy().load().type(Nonce.class).filter("created <",oldest).keys().list();
+		// delete all Nonce objects older than the validity interval
+		List<Key<Nonce>> expired = ofy().load().type(Nonce.class).filter("created <", oldest).keys().list();
 		if (expired.size() > 0) ofy().delete().keys(expired);
 		
 		// check to see if a Nonce with the specified id already exists in the database
-		if (ofy().load().type(Nonce.class).id(nonce).now() != null) return false; // if nonce exists
+		if (ofy().load().type(Nonce.class).id(nonce).now() != null) return false;  // nonce already used
 		
 		// store a new Nonce object in the datastore with the unique nonce string
-		ofy().save().entity(new Nonce(nonce));
+		ofy().save().entity(new Nonce(nonce)).now();
 		
 		return true;
 	}
