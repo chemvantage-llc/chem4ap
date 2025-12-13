@@ -84,14 +84,6 @@ public class LTIRegistration extends HttpServlet {
 	private static final String DEFAULT_PRICE = "2";
 	static String price = DEFAULT_PRICE;
 	
-	// LMS type constants
-	private static final String LMS_CANVAS = "canvas";
-	private static final String LMS_BRIGHTSPACE = "brightspace";
-	private static final String LMS_MOODLE = "moodle";
-	private static final String LMS_BLACKBOARD = "blackboard";
-	private static final String LMS_SCHOOLOGY = "schoology";
-	private static final String LMS_SAKAI = "sakai";
-	
 	// LTI scope URIs
 	private static final String SCOPE_LINEITEM = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
 	private static final String SCOPE_LINEITEM_READONLY = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly";
