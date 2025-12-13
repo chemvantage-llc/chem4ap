@@ -27,24 +27,41 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
+/**
+ * Domain model for an AP Chemistry assignment/exercise set; persisted with Objectify.
+ * Integrates with LTI 1.3 for learning management system deployment.
+ */
 @Entity
 public class Assignment implements java.lang.Cloneable {
+	private static final int MIN_QUESTIONS_PER_TOPIC = 5;
+	private static final long VALIDATION_TIMEOUT_MS = 2635200000L; // ~1 month
+
 	@Id 	Long id;
-	@Index	String platform_deployment_id;
-	@Index	String assignmentType;
-	@Index	String resourceLinkId;
-	@Index 	Date created;
-	@Index	String lti_ags_lineitems_url;
-	@Index	String lti_ags_lineitem_url;
-	@Index	Date valid;
-			String lti_nrps_context_memberships_url;
+	@Index	String platform_deployment_id;  // LTI platform deployment identifier
+	@Index	String assignmentType;          // e.g., "Exercises", "Homework"
+	@Index	String resourceLinkId;          // LTI resource link identifier
+	@Index 	Date created;                   // Assignment creation timestamp
+	@Index	String lti_ags_lineitems_url;   // LTI Assignment and Grade Services endpoint
+	@Index	String lti_ags_lineitem_url;    // LTI specific line item URL
+	@Index	Date valid;                     // Last validation timestamp
+			String lti_nrps_context_memberships_url;  // LTI Names and Role Provisioning Services URL
 			String title;
-	@Index	Long unitId;
-			List<Long> topicIds = new ArrayList<Long>();
+	@Index	Long unitId;                    // Reference to parent APChemUnit
+			List<Long> topicIds = new ArrayList<Long>();  // Topics included in this assignment
 			
-	Assignment() {}
+	/** Default no-arg constructor required by Objectify. */
+	public Assignment() {}
 	
-	Assignment(String assignmentType, String title, Long unitId, String platform_deployment_id) {
+	/**
+	 * Constructs an assignment and auto-populates topics with sufficient question coverage.
+	 * Only topics with > 5 questions are included to ensure adequate exercise variety.
+	 * 
+	 * @param assignmentType type of assignment (e.g., "Exercises")
+	 * @param title display title
+	 * @param unitId reference to parent unit
+	 * @param platform_deployment_id LTI platform deployment ID
+	 */
+	public Assignment(String assignmentType, String title, Long unitId, String platform_deployment_id) {
 		this.assignmentType = assignmentType;
 		this.title = title;
 		this.unitId = unitId;
@@ -54,61 +71,52 @@ public class Assignment implements java.lang.Cloneable {
 		List<APChemTopic> topics = ofy().load().type(APChemTopic.class).filter("unitId",unit.id).order("topicNumber").list();
 		for (APChemTopic t: topics) {
 			int nQuestions = ofy().load().type(Question.class).filter("assignmentType","Exercises").filter("topicId",t.id).count();
-			if (nQuestions >5) topicIds.add(t.id);
+			if (nQuestions > MIN_QUESTIONS_PER_TOPIC) topicIds.add(t.id);
 		}
 	}
 
-	protected Assignment clone() throws CloneNotSupportedException {
+	@Override
+	public Assignment clone() throws CloneNotSupportedException {
 		return (Assignment) super.clone();
 	}
 	
+	/**
+	 * Compares this assignment to another for equivalence.
+	 * All fields must match (or both be null), except valid must be within 1 month tolerance.
+	 * 
+	 * @param a the assignment to compare against
+	 * @return true if assignments are equivalent, false otherwise
+	 */
 	boolean equivalentTo(Assignment a) {
-		// This method compares another Assignment to this one and ensures that all fields are either the same or both null
-		// except for primitive (long) fields, which may not be null and must be equal (possibly 0L).
-		if (a==null) return false;
+		if (a == null) return false;
 		
-		return	((this.id != null && this.id.equals(a.id)) 																								|| (a.id == null && this.id == null)) &&
-				((this.platform_deployment_id != null && this.platform_deployment_id.equals(a.platform_deployment_id)) 																					|| (a.platform_deployment_id == null && this.platform_deployment_id == null)) &&
-				((this.assignmentType != null && this.assignmentType.equals(a.assignmentType)) 															|| (a.assignmentType == null && this.assignmentType == null)) &&
-				((this.resourceLinkId != null && this.resourceLinkId.equals(a.resourceLinkId)) 															|| (a.resourceLinkId == null && this.resourceLinkId == null)) &&
-				((this.lti_ags_lineitems_url != null && this.lti_ags_lineitems_url.equals(a.lti_ags_lineitems_url)) 									|| (a.lti_ags_lineitems_url == null && this.lti_ags_lineitems_url == null)) &&
-				((this.lti_ags_lineitem_url != null && this.lti_ags_lineitem_url.equals(a.lti_ags_lineitem_url)) 										|| (a.lti_ags_lineitem_url == null && this.lti_ags_lineitem_url == null)) &&
-				((this.lti_nrps_context_memberships_url != null && this.lti_nrps_context_memberships_url.equals(a.lti_nrps_context_memberships_url)) 	|| (a.lti_nrps_context_memberships_url == null && this.lti_nrps_context_memberships_url == null)) &&
-			//	((this.questionKeys != null && this.questionKeys.equals(a.questionKeys)) 																|| (a.questionKeys == null && this.questionKeys == null)) &&
-				(this.valid != null && a.valid != null && this.valid.getTime()-a.valid.getTime()<2635200000L);	// less than 1 month since last validation		
-	}
-		
-
-/*
-
-	Assignment(String platformDeploymentId,String resourceLinkId,String lti_nrps_context_memberships_url) {
-		this.domain = platformDeploymentId;
-		this.resourceLinkId = resourceLinkId;
-		this.lti_nrps_context_memberships_url = lti_nrps_context_memberships_url;
-		this.created = new Date();
-	}
-
-	Assignment(String assignmentType, String platform_deployment_id) {
-		this.assignmentType = assignmentType;
-		this.domain = platform_deployment_id;
-		this.created = new Date();
-		this.valid = new Date();
-		this.pollIsClosed = true;
+		return fieldsEqual(this.id, a.id) &&
+			   fieldsEqual(this.platform_deployment_id, a.platform_deployment_id) &&
+			   fieldsEqual(this.assignmentType, a.assignmentType) &&
+			   fieldsEqual(this.resourceLinkId, a.resourceLinkId) &&
+			   fieldsEqual(this.lti_ags_lineitems_url, a.lti_ags_lineitems_url) &&
+			   fieldsEqual(this.lti_ags_lineitem_url, a.lti_ags_lineitem_url) &&
+			   fieldsEqual(this.lti_nrps_context_memberships_url, a.lti_nrps_context_memberships_url) &&
+			   (this.valid != null && a.valid != null && 
+			    Math.abs(this.valid.getTime() - a.valid.getTime()) < VALIDATION_TIMEOUT_MS);
 	}
 	
-	public List<Key<Question>> getQuestionKeys() {
-		return questionKeys==null?new ArrayList<Key<Question>>():this.questionKeys;
+	/** Helper method to safely compare nullable fields. */
+	private boolean fieldsEqual(Object field1, Object field2) {
+		return (field1 != null && field1.equals(field2)) || (field1 == null && field2 == null);
 	}
-
-	void updateQuestions(HttpServletRequest request) {
-		try {
-			String[] questionIds = request.getParameterValues("QuestionId");
-			this.questionKeys.clear();
-			if (questionIds != null) for (String id : questionIds) this.questionKeys.add(key(Question.class,Long.parseLong(id)));
-			ofy().save().entity(this).now();	
-		} catch (Exception e) {}
-	}
-
-*/
-
+		
+	// Getter methods
+	public Long getId() { return id; }
+	public String getAssignmentType() { return assignmentType; }
+	public String getTitle() { return title; }
+	public Long getUnitId() { return unitId; }
+	public List<Long> getTopicIds() { return topicIds; }
+	public Date getCreated() { return created; }
+	public Date getValid() { return valid; }
+	public String getPlatformDeploymentId() { return platform_deployment_id; }
+	public String getResourceLinkId() { return resourceLinkId; }
+	public String getLtiAgsLineitemsUrl() { return lti_ags_lineitems_url; }
+	public String getLtiAgsLineitemUrl() { return lti_ags_lineitem_url; }
+	public String getLtiNrpsContextMembershipsUrl() { return lti_nrps_context_memberships_url; }
 }

@@ -7,6 +7,10 @@ import com.googlecode.objectify.annotation.Entity;
 import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Index;
 
+/**
+ * Domain model for an AP Chemistry unit; persisted with Objectify.
+ * Field visibility is package-private to match existing datastore usage.
+ */
 @Entity
 public class APChemUnit implements Serializable {
 
@@ -18,6 +22,13 @@ public class APChemUnit implements Serializable {
 	 		String summary;
 	 		List<Long> topicIds;
 
-	APChemUnit() {}
+	/** Default no-arg constructor required by Objectify. */
+	public APChemUnit() {}
+
+	public Long getId() { return id; }
+	public int getUnitNumber() { return unitNumber; }
+	public String getTitle() { return title; }
+	public String getSummary() { return summary; }
+	public List<Long> getTopicIds() { return topicIds; }
 
 }

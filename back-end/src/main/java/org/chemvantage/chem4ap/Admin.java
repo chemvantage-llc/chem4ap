@@ -19,20 +19,23 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+/**
+ * Admin servlet for viewing feedback and managing subscription vouchers.
+ * Expects requests from authenticated ChemVantage admins only.
+ */
 @WebServlet("/admin")
 public class Admin extends HttpServlet {
 
 	private static final long serialVersionUID = 1L;
 	
+	@Override
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
-		
-		String userId = "admin";
-		User user = new User("https://"+request.getServerName(), userId);
-		user.setIsChemVantageAdmin(true);
+
+		User user = createAdminUser(request);
 		
 		PrintWriter out = response.getWriter();
-		response.setContentType("text/html");
+		response.setContentType("text/html; charset=UTF-8");
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
 
@@ -44,15 +47,14 @@ public class Admin extends HttpServlet {
 		}
 	}
 	
+	@Override
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 			throws ServletException, IOException {
-		
-		String userId = "admin";
-		User user = new User("https://"+request.getServerName(), userId);
-		user.setIsChemVantageAdmin(true);
+
+		User user = createAdminUser(request);
 		
 		PrintWriter out = response.getWriter();
-		response.setContentType("text/html");
+		response.setContentType("text/html; charset=UTF-8");
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
 
@@ -63,6 +65,7 @@ public class Admin extends HttpServlet {
 			} catch (Exception e) {
 				out.println(e.getMessage());
 			}
+			// intentional fall-through: render admin form after action
 		default: 
 		}
 		
@@ -74,8 +77,11 @@ public class Admin extends HttpServlet {
 		}
 	}
 	
+	/**
+	 * Builds the admin HTML page based on the current request context.
+	 */
 	String adminForm(User user,HttpServletRequest request) throws Exception {
-		StringBuffer buf = new StringBuffer(Util.head("Admin"));
+		StringBuilder buf = new StringBuilder(Util.head("Admin"));
 		String userRequest =  request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
 		
@@ -98,6 +104,7 @@ public class Admin extends HttpServlet {
 		switch (userRequest) {
 		case "CreateVouchers":
 			sinceWhen = new Date(new Date().getTime()-5000L);
+			// intentional fall-through: show the just-created vouchers
 		case "ViewVoucherCodes":
 			String org = request.getParameter("Org");
 			vouchers = ofy().load().type(Voucher.class).filter("activated =",null).filter("org",org).filter("purchased >",sinceWhen).list();
@@ -142,6 +149,10 @@ public class Admin extends HttpServlet {
 		return buf.toString() + Util.foot();
 	}
 	
+	/**
+	 * Creates and persists voucher entities based on request parameters.
+	 * Assumes numeric parameters are well-formed; NumberFormatException will propagate on bad input.
+	 */
 	void createVouchers(HttpServletRequest request) {
 		int n = Integer.parseInt(request.getParameter("NVouchers"));
 		String org = request.getParameter("Org");
@@ -151,5 +162,15 @@ public class Admin extends HttpServlet {
 		List<Voucher> newVouchers = new ArrayList<Voucher>();
 		for (int i=0; i<n; i++) newVouchers.add(new Voucher(org,price,nMonths));
 		ofy().save().entities(newVouchers).now();
+	}
+
+	/**
+	 * Helper to create an admin user scoped to the current host.
+	 */
+	private User createAdminUser(HttpServletRequest request) {
+		String userId = "admin";
+		User user = new User("https://" + request.getServerName(), userId);
+		user.setIsChemVantageAdmin(true);
+		return user;
 	}
 }

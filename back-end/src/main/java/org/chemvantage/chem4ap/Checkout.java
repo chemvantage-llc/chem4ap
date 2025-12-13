@@ -47,21 +47,35 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-
+/**
+ * Checkout servlet for managing Chem4AP subscription purchases via PayPal.
+ * Handles voucher redemption, order creation, and order completion.
+ */
 @WebServlet("/checkout")
 public class Checkout extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
-	private static int price = 2;
+	private static final int PRICE_USD = 2;
+	private static final int MONTHS_2 = 2;
+	private static final int MONTHS_5 = 5;
+	private static final int MONTHS_12 = 12;
+	private static final int HTTP_SUCCESS = 200;
+	private static final int TOKEN_CACHE_GRACE_MS = 5000;  // 5 second grace period
+	private static final int HTTP_TIMEOUT_MS = 15000;
+	
 	private JsonObject auth_json = new JsonObject();
 	
 	public String getServletInfo() {
 		return "This servlet is used by students to purchase Chem4AP subscriptions.";
 	}
 
+	/**
+	 * GET: Display the checkout page with voucher/payment options.
+	 */
+	@Override
 	public void doGet(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		response.setContentType("text/html");
+		response.setContentType("text/html; charset=UTF-8");
 		PrintWriter out = response.getWriter();
 		User user = User.getUser(request.getParameter("sig"));
 		try {
@@ -79,9 +93,13 @@ public class Checkout extends HttpServlet {
 		}
 	}
 
+	/**
+	 * POST: Handle voucher redemption, order creation, or order completion.
+	 */
+	@Override
 	public void doPost(HttpServletRequest request,HttpServletResponse response)
 	throws ServletException, IOException {
-		response.setContentType("application/json");
+		response.setContentType("application/json; charset=UTF-8");
 		PrintWriter out = response.getWriter();
 		User user = null;
 		JsonObject res = new JsonObject();
@@ -121,8 +139,11 @@ public class Checkout extends HttpServlet {
 		}
 	}
 
+	/**
+	 * Builds the HTML checkout page with voucher redemption and payment options.
+	 */
 	static String checkoutPage(User user, String platform_deployment_id) {
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		
 		Date now = new Date();
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL);
@@ -134,7 +155,7 @@ public class Checkout extends HttpServlet {
 		buf.append("<input type=hidden id=client_id value='" + Util.getPayPalClientId() + "' />"); 		
 		buf.append("<input type=hidden id=sig value=" + user.getTokenSignature() + " />");
 		buf.append("<input type=hidden id=platform_deployment_id value=" + platform_deployment_id + " />");
-		buf.append("<input type=hidden id=price value=" + price + " />");
+		buf.append("<input type=hidden id=price value=" + PRICE_USD + " />");
 
 		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();		
 		String title = (u != null && u.exp.before(now))?"Your Chem4AP subscription expired on " + df.format(u.exp):"Individual Chem4AP Subscription";
@@ -154,9 +175,9 @@ public class Checkout extends HttpServlet {
 		buf.append("<hr>Otherwise, please select the desired number of months you wish to purchase:<br/>"
 				+ "<div style='align: center'>"
 				+ "<select id=nmonths>"
-				+ "<option value=2>2 months - $" + 2*price + " USD</option>"
-				+ "<option value=5>5 months - $" + 4*price + " USD</option>"
-				+ "<option value=12 selected>12 months - $" + 8*price + " USD</option>"
+				+ "<option value=" + MONTHS_2 + ">" + MONTHS_2 + " months - $" + MONTHS_2*PRICE_USD + " USD</option>"
+				+ "<option value=" + MONTHS_5 + ">" + MONTHS_5 + " months - $" + 4*PRICE_USD + " USD</option>"
+				+ "<option value=" + MONTHS_12 + " selected>" + MONTHS_12 + " months - $" + 8*PRICE_USD + " USD</option>"
 				+ "</select>&nbsp;"
 				+ "<button class='btn btn-primary' onclick=startCheckout();>Checkout</button>"
 				+ "</div>");		
@@ -179,6 +200,14 @@ public class Checkout extends HttpServlet {
 		return buf.toString();
 	}
 	
+	/**
+	 * Redeems a subscription voucher for the user.
+	 * 
+	 * @param user the authenticated user
+	 * @param request the HTTP request containing voucher_code
+	 * @return the expiration date of the activated subscription
+	 * @throws Exception if voucher is invalid or already redeemed
+	 */
 	Date redeemVoucher(User user, HttpServletRequest request) throws Exception {
 		PremiumUser pu = null;
 		
@@ -199,18 +228,30 @@ public class Checkout extends HttpServlet {
 		return pu.exp;
 	}
 	
+	/**
+	 * Helper method to check if HTTP response indicates success (2xx status).
+	 */
+	private boolean isSuccessResponse(HttpURLConnection conn) throws IOException {
+		return conn.getResponseCode() / 100 == 2;
+	}
+	
+	/**
+	 * Generates an OAuth 2.0 access token for PayPal REST APIs.
+	 * Caches the token and reuses it until expiration (with 5-second grace period).
+	 * @see https://developer.paypal.com/api/rest/authentication/
+	 */
 	String generateAccessToken() throws Exception {
-		/**
-		 * Generate an OAuth 2.0 access token for authenticating with PayPal REST APIs.
-		 * @see https://developer.paypal.com/api/rest/authentication/
-		 */
 		Date now = new Date();
 		
-		try {  // First, see if there is a cached auth token:
-			
-			if (auth_json.isEmpty() || new Date(auth_json.get("exp").getAsLong()).after(now)) throw new Exception();
-			return auth_json.get("access_token").getAsString();
-			
+		try {  // First, check if there is a cached non-expired auth token
+			if (!auth_json.has("access_token") || !auth_json.has("exp")) {
+				throw new Exception("Cache miss");
+			}
+			Date exp = new Date(auth_json.get("exp").getAsLong());
+			if (exp.after(now)) {
+				return auth_json.get("access_token").getAsString();
+			}
+			throw new Exception("Token expired");
 		} catch (Exception e) {  // retrieve a new auth token from PayPal
 			
 			String auth = Base64.getEncoder().encodeToString((Util.getPayPalClientId()+":"+Util.getPayPalClientSecret()).getBytes());
@@ -228,36 +269,49 @@ public class Checkout extends HttpServlet {
 			uc.setRequestProperty("Accept", "application/json;charset=UTF-8");
 			uc.setRequestProperty("charset", "utf-8");
 			uc.setUseCaches(false);
-			uc.setReadTimeout(15000);  // waits up to 15 s for server to respond
+			uc.setReadTimeout(HTTP_TIMEOUT_MS);
 			// send the message
-			DataOutputStream wr = new DataOutputStream(uc.getOutputStream());
-			wr.writeBytes(body);
-			wr.close();
+			try (DataOutputStream wr = new DataOutputStream(uc.getOutputStream())) {
+				wr.writeBytes(body);
+			}
 
 			BufferedReader reader = null;
-			if (uc.getResponseCode()/100==2) {
-				reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
-				auth_json = JsonParser.parseReader(reader).getAsJsonObject();
-				reader.close();
+			try {
+				if (isSuccessResponse(uc)) {
+					reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
+					auth_json = JsonParser.parseReader(reader).getAsJsonObject();
+					reader.close();
 
-				// Cache the auth_json for future use
-				int expires_in = auth_json.get("expires_in").getAsInt();  // seconds from now
-				Long exp = new Date(new Date().getTime() + expires_in*1000L - 5000L).getTime();  // exp millis - 5 s grace
-				auth_json.addProperty("exp", exp);
-				return auth_json.get("access_token").getAsString();
-			} else {
-				reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));				
-				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-				reader.close();
-				Util.sendEmail("ChemVantage LLC", "admin@chemvantage.org", "PayPal AuthToken Error", json.toString());
-				return null;
+					// Cache the auth_json for future use
+					int expires_in = auth_json.get("expires_in").getAsInt();  // seconds from now
+					Long exp = new Date(new Date().getTime() + expires_in*1000L - TOKEN_CACHE_GRACE_MS).getTime();
+					auth_json.addProperty("exp", exp);
+					return auth_json.get("access_token").getAsString();
+				} else {
+					reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));				
+					JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+					reader.close();
+					Util.sendEmail("ChemVantage LLC", "admin@chemvantage.org", "PayPal AuthToken Error", json.toString());
+					throw new Exception("PayPal authentication failed: " + json.toString());
+				}
+			} finally {
+				if (reader != null) reader.close();
+				uc.disconnect();
 			}
 		}
 	}
 	
+	/**
+	 * Creates a PayPal order for the specified number of subscription months.
+	 * 
+	 * @param user the authenticated user
+	 * @param request the HTTP request containing nmonths parameter
+	 * @return the PayPal order ID
+	 * @throws Exception if order creation fails
+	 */
 	String createOrder(User user, HttpServletRequest request) throws Exception {	
 		int nMonths = Integer.parseInt(request.getParameter("nmonths"));
-		int value = price * (nMonths - nMonths/3);
+		int value = PRICE_USD * (nMonths - nMonths/3);
 		
 		String platform_deployment_id = request.getParameter("d");
 		String request_id = UUID.randomUUID().toString();
@@ -269,7 +323,7 @@ public class Checkout extends HttpServlet {
 		    subscription.addProperty("description", nMonths + " - month Chem4AP subscription");
 		      JsonObject amount = new JsonObject();
 		      amount.addProperty("currency_code", "USD");
-		      amount.addProperty("value", (price * (nMonths - nMonths/3)) + ".00");  // calculated discount schedule
+		      amount.addProperty("value", (PRICE_USD * (nMonths - nMonths/3)) + ".00");  // calculated discount schedule
 		    subscription.add("amount", amount);
 		 purchaseUnits.add(subscription);
 		order_data.add("purchase_units", purchaseUnits);
@@ -285,28 +339,41 @@ public class Checkout extends HttpServlet {
 		uc.setRequestProperty("Content-Type","application/json");
 		uc.setDoOutput(true);
 		
-		OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream());
-		writer.write(order_data.toString());
-		writer.flush();
-		writer.close();
-		uc.getOutputStream().close();
+		try (OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream())) {
+			writer.write(order_data.toString());
+			writer.flush();
+		}
 
 		BufferedReader reader = null;
-		if (uc.getResponseCode()/100==2) {
-			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
-			String order_id = JsonParser.parseReader(reader).getAsJsonObject().get("id").getAsString();
-			reader.close();
-			ofy().save().entity(new PayPalOrder(order_id,new Date(),order_data.toString(),nMonths,value,user,platform_deployment_id,request_id));
-			return order_id;
-		} else {
-			reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));				
-			JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-			reader.close();
-			Util.sendEmail("ChemVantage LLC", "admin@chemvantage.org", "PayPal OrderId Error", json.toString());
-			return null;
+		try {
+			if (isSuccessResponse(uc)) {
+				reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
+				String order_id = JsonParser.parseReader(reader).getAsJsonObject().get("id").getAsString();
+				reader.close();
+				ofy().save().entity(new PayPalOrder(order_id,new Date(),order_data.toString(),nMonths,value,user,platform_deployment_id,request_id));
+				return order_id;
+			} else {
+				reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));				
+				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+				reader.close();
+				Util.sendEmail("ChemVantage LLC", "admin@chemvantage.org", "PayPal OrderId Error", json.toString());
+				throw new Exception("Failed to create PayPal order: " + json.toString());
+			}
+		} finally {
+			if (reader != null) reader.close();
+			uc.disconnect();
 		}
 	}
 	
+	/**
+	 * Completes a PayPal order by capturing the payment.
+	 * Creates a PremiumUser record on successful capture.
+	 * 
+	 * @param user the authenticated user
+	 * @param request the HTTP request containing order_id parameter
+	 * @return JSON response with order status and expiration date
+	 * @throws Exception if capture fails
+	 */
 	JsonObject completeOrder(User user, HttpServletRequest request) throws Exception {
 		String order_id = request.getParameter("order_id");
 		PayPalOrder order = ofy().load().type(PayPalOrder.class).id(order_id).safe();
@@ -340,6 +407,10 @@ public class Checkout extends HttpServlet {
 	
 }
 
+/**
+ * Domain model for a PayPal order; persisted with Objectify.
+ * Tracks order details, pricing, and payment status.
+ */
 @Entity
 class PayPalOrder {
 	@Id 	String id;    // this is a PayPal-generated value for the path of API calls
@@ -352,8 +423,13 @@ class PayPalOrder {
 			String platform_deployment_id;
 			String status = "CREATED";
 			
-	PayPalOrder() {}
-	PayPalOrder(String id, Date created, String order_data, int nMonths, int value, User user, String platform_deployment_id, String request_id) {
+	/** Default no-arg constructor required by Objectify. */
+	public PayPalOrder() {}
+	
+	/**
+	 * Constructs a new PayPal order record.
+	 */
+	public PayPalOrder(String id, Date created, String order_data, int nMonths, int value, User user, String platform_deployment_id, String request_id) {
 		this.id = id;
 		this.created = created;
 		this.order_data = order_data;
