@@ -59,7 +59,6 @@ public class Checkout extends HttpServlet {
 	private static final int MONTHS_2 = 2;
 	private static final int MONTHS_5 = 5;
 	private static final int MONTHS_12 = 12;
-	private static final int HTTP_SUCCESS = 200;
 	private static final int TOKEN_CACHE_GRACE_MS = 5000;  // 5 second grace period
 	private static final int HTTP_TIMEOUT_MS = 15000;
 	
