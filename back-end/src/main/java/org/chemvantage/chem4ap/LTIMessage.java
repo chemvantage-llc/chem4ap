@@ -197,10 +197,18 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	}
    
     static JsonObject getLineItem(Deployment d, String lti_ags_lineitem_url) {
+    	// Validate input parameters
+    	if (d == null) {
+    		throw new IllegalArgumentException("Deployment cannot be null");
+    	}
+    	if (lti_ags_lineitem_url == null || lti_ags_lineitem_url.isEmpty()) {
+    		throw new IllegalArgumentException("lti_ags_lineitem_url cannot be null or empty");
+    	}
+    	
     	// This method returns a single lineitem from the platform
     	int responseCode = 0;
     	try {
-    		String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
+    		String scope = SCOPE_AGS_LINEITEM;
     		String bearerAuth = "Bearer " + getAccessToken(d.platform_deployment_id,scope);
 
     		URL u = new URI(lti_ags_lineitem_url).toURL();
@@ -318,115 +326,121 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
     }
 
     static String postUserScore(Score s, String userId) throws Exception {
-		// This method uses the LTIv1p3 message protocol to post a user's score to the LMS grade book.
-		// The lineitem URL corresponds to the LMS grade book column for the Assignment entity,
-		// and the specific cell is identified by the user_id value defined by the LMS platform
+    	// Validate input parameters
+    	if (s == null) {
+    		throw new IllegalArgumentException("Score cannot be null");
+    	}
+    	if (userId == null || userId.isEmpty()) {
+    		throw new IllegalArgumentException("userId cannot be null or empty");
+    	}
+    	
+    	// This method uses the LTIv1p3 message protocol to post a user's score to the LMS grade book.
+    	// The lineitem URL corresponds to the LMS grade book column for the Assignment entity,
+    	// and the specific cell is identified by the user_id value defined by the LMS platform
 
-		StringBuffer buf = new StringBuffer("PostUserScoreDebug:");
-		try {
-			Assignment a = ofy().load().type(Assignment.class).id(s.id).safe();
-			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/score";
-			buf.append("AssignmentId=" + (a==null?"unknown":a.id) + "<br/>");
+    	StringBuilder buf = new StringBuilder("PostUserScoreDebug:");
+    	try {
+    		Assignment a = ofy().load().type(Assignment.class).id(s.id).safe();
+    		String scope = SCOPE_AGS_SCORE;
+    		buf.append("AssignmentId=" + (a == null ? "unknown" : a.id) + "<br/>");
 
-			String authToken = getAccessToken(a != null ? a.platform_deployment_id : null, scope);
-			buf.append("AuthToken:" + authToken + "<br/>");
+    		String authToken = getAccessToken(a != null ? a.platform_deployment_id : null, scope);
+    		buf.append("AuthToken:" + authToken + "<br/>");
 
-			if (authToken.startsWith("Failed")) throw new Exception("Failed: could not get access token. " + authToken);
-			String bearerAuth = "Bearer " + authToken;
-			
-			String raw_id = userId.substring(userId.lastIndexOf("/")+1);
-			
-			SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-			Timestamp timestamp = new Timestamp(new Date().getTime());
-			//String timestamp = ZonedDateTime.now(ZoneOffset.UTC).format());   //.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+    		if (authToken.startsWith("Failed")) throw new Exception("Failed: could not get access token. " + authToken);
+    		String bearerAuth = "Bearer " + authToken;
+    		
+    		String raw_id = userId.substring(userId.lastIndexOf("/") + 1);
+    		
+    		SimpleDateFormat sdf2 = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+    		Timestamp timestamp = new Timestamp(new Date().getTime());
 
-			JsonObject j = new JsonObject();
-			j.addProperty("timestamp", sdf2.format(timestamp));
-			j.addProperty("scoreGiven", Double.valueOf(s.maxScore));
-			j.addProperty("scoreMaximum", 100);
-			j.addProperty("activityProgress", "Completed");
-			j.addProperty("gradingProgress", "FullyGraded");
-			j.addProperty("userId", raw_id);
-			String json = j.toString();
+    		JsonObject j = new JsonObject();
+    		j.addProperty("timestamp", sdf2.format(timestamp));
+    		j.addProperty("scoreGiven", Double.valueOf(s.totalScore));
+    		j.addProperty("scoreMaximum", Double.valueOf(s.maxScore));
+    		j.addProperty("activityProgress", "Completed");
+    		j.addProperty("gradingProgress", "FullyGraded");
+    		j.addProperty("userId", raw_id);
+    		String json = j.toString();
 
-			// append "/scores" to the lineitem URL, taking into account that the URL may have a query part (thank you, Moodle)
-			URL u = null;
-			int i = a.lti_ags_lineitem_url.indexOf("?")==-1?a.lti_ags_lineitem_url.length():a.lti_ags_lineitem_url.indexOf("?");
-			u = new URI(a.lti_ags_lineitem_url.substring(0,i) + "/scores" + a.lti_ags_lineitem_url.substring(i)).toURL();
+    		// append "/scores" to the lineitem URL, taking into account that the URL may have a query part (thank you, Moodle)
+    		URL u = null;
+    		int i = a.lti_ags_lineitem_url.indexOf("?") == -1 ? a.lti_ags_lineitem_url.length() : a.lti_ags_lineitem_url.indexOf("?");
+    		u = new URI(a.lti_ags_lineitem_url.substring(0, i) + "/scores" + a.lti_ags_lineitem_url.substring(i)).toURL();
 
-			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
-			uc.setRequestMethod("POST");
-			uc.setRequestProperty("Authorization", bearerAuth);
-			uc.setRequestProperty("Content-Type", "application/vnd.ims.lis.v1.score+json");
-			uc.setDoOutput(true);
+    		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
+    		uc.setRequestMethod("POST");
+    		uc.setRequestProperty("Authorization", bearerAuth);
+    		uc.setRequestProperty("Content-Type", "application/vnd.ims.lis.v1.score+json;charset=UTF-8");
+    		uc.setDoOutput(true);
 
-			// send the message
-			//OutputStreamWriter toTC = new OutputStreamWriter(uc.getOutputStream());
-			OutputStream os = uc.getOutputStream();
-			byte[] json_bytes = json.getBytes("utf-8");
-			os.write(json_bytes, 0, json_bytes.length);           
-			os.close();
+    		// send the message
+    		OutputStream os = uc.getOutputStream();
+    		byte[] json_bytes = json.getBytes("utf-8");
+    		os.write(json_bytes, 0, json_bytes.length);           
+    		os.close();
 
-			int responseCode = uc.getResponseCode(); // success if 200-202
-			buf.append("Response Code = " + responseCode + "<br/>");
+    		int responseCode = uc.getResponseCode(); // success if 200-202
+    		buf.append("Response Code = " + responseCode + "<br/>");
 
-			boolean success = responseCode>199 && responseCode<203;
-			if (success) {  
-				//s.lisReportComplete = true;
-				//ofy().save().entity(s);
-				buf.append("Success " + responseCode + "<br/>AuthToken: " + authToken + "<br/>JSON: " + json);
-				//sendEmailToAdmin("Score submission success",buf.toString());
-			} else if (responseCode==422) {
-				buf.append("Response code 422: This LMS does not allow LTI score submissions for instructors or test students.<br/>");
-				//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
-			} else {			
-				buf.append(uc.getRequestMethod() + " " + u.toString() + "<br>"
-						+ "Content-Type: application/vnd.ims.lis.v1.score+json<br>"
-						+ "Authorization: " + bearerAuth + "<p>"
-						+ json + "<p>");
-				Map<String,List<String>> headers = uc.getHeaderFields();
-				for (Entry<String,List<String>> e : headers.entrySet()) {
-					buf.append(e.getKey() + ": ");
-					for (String es : e.getValue()) buf.append(es + " ");
-					buf.append("<br>");
-				}
+    		boolean success = responseCode > 199 && responseCode < 203;
+    		if (success) {  
+    			buf.append("Success " + responseCode + "<br/>AuthToken: " + authToken + "<br/>JSON: " + json);
+    		} else if (responseCode == 422) {
+    			buf.append("Response code 422: This LMS does not allow LTI score submissions for instructors or test students.<br/>");
+    		} else {			
+    			buf.append(uc.getRequestMethod() + " " + u.toString() + "<br>"
+    					+ "Content-Type: application/vnd.ims.lis.v1.score+json<br>"
+    					+ "Authorization: " + bearerAuth + "<p>"
+    					+ json + "<p>");
+    			Map<String,List<String>> headers = uc.getHeaderFields();
+    			for (Entry<String,List<String>> e : headers.entrySet()) {
+    				buf.append(e.getKey() + ": ");
+    				for (String es : e.getValue()) buf.append(es + " ");
+    				buf.append("<br>");
+    			}
 
-				BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
-				String line;
-				while ((line = reader.readLine()) != null) {
-					buf.append(line);
-				}
-				reader.close();
-				//Utilities.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
-			}
-		}
-		catch (Exception e) {
-			Util.sendEmail("ChemVantage","admin@chemvantage.org","Score submission failed",buf.toString());
-		}
-		return buf.toString();
-	}
+    			BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
+    			String line;
+    			while ((line = reader.readLine()) != null) {
+    				buf.append(line);
+    			}
+    			reader.close();
+    		}
+    	}
+    	catch (Exception e) {
+    		Util.sendEmail("ChemVantage", "admin@chemvantage.org", "Score submission failed", buf.toString());
+    	}
+    	return buf.toString();
+    }
 	
 	static Map<String,String> readMembershipScores(Assignment a) {
+		// Validate input parameter
+		if (a == null) {
+			throw new IllegalArgumentException("Assignment cannot be null");
+		}
+		
 		// This method uses the LTIv1p3 message protocol to retrieve a JSON containing all of
-		// the existing  scores for one assignment from the LMS. 
-		// The lineitem URL corresponds to the LMS grade book column fpr the Assignment entity.
+		// the existing scores for one assignment from the LMS. 
+		// The lineitem URL corresponds to the LMS grade book column for the Assignment entity.
 		
 		// Construct the deployment_id because we may need to strip this from the userId values
 		
 		Map<String,String> scores = new HashMap<String,String>();		
 		
 		try {		
-			String scope = "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly";
-			String bearerAuth = "Bearer " + getAccessToken(a.platform_deployment_id,scope);
+			String scope = SCOPE_AGS_RESULT_READONLY;
+			String bearerAuth = "Bearer " + getAccessToken(a.platform_deployment_id, scope);
 
-			if (a.lti_ags_lineitem_url==null) throw new Exception("the lineitem URL for this assignment is unknown");
+			if (a.lti_ags_lineitem_url == null) throw new Exception("the lineitem URL for this assignment is unknown");
 			
 			// calculate the index of the position between the path and query parts of the URL
 			int beginQuery = a.lti_ags_lineitem_url.indexOf("?");
 			if (beginQuery == -1) beginQuery = a.lti_ags_lineitem_url.length();  // end of the path (no query)
 			
 			// append "/results" to the path and reassemble the URL
-			String next_url = a.lti_ags_lineitem_url.substring(0,beginQuery) + "/results" + a.lti_ags_lineitem_url.substring(beginQuery);
+			String next_url = a.lti_ags_lineitem_url.substring(0, beginQuery) + "/results" + a.lti_ags_lineitem_url.substring(beginQuery);
 			
 			URL u = null;
 			while (next_url != null) {
@@ -449,18 +463,31 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 					while(iterator.hasNext()) {
 						JsonObject result = iterator.next().getAsJsonObject();
 						String userId = result.get("userId").getAsString();
-						scores.put(userId,String.valueOf(Math.round(1000.*result.get("resultScore").getAsDouble()/result.get("resultMaximum").getAsDouble())/10.));
+						scores.put(userId, String.valueOf(Math.round(1000. * result.get("resultScore").getAsDouble() / result.get("resultMaximum").getAsDouble()) / 10.));
 					}
 				}
 				next_url = null;
-				try {  // per LTI AGS specs, this section looks for a HttpLink to the next page of results
-					String[] links = uc.getHeaderField("Link").split(",");  // splits comma-separated list of Links
-					for (String l : links) if (l.contains("next")) next_url = l.substring(l.indexOf("<")+1,l.indexOf(">")); // url is enclosed in <>
-				} catch (Exception e2) {}
+				try {  // per LTI AGS specs, this section looks for an HttpLink to the next page of results
+					String linkHeader = uc.getHeaderField("Link");
+					if (linkHeader != null) {
+						String[] links = linkHeader.split(",");  // splits comma-separated list of Links
+						for (String l : links) {
+							if (l.contains("next")) {
+								int startIdx = l.indexOf("<");
+								int endIdx = l.indexOf(">");
+								if (startIdx >= 0 && endIdx > startIdx) {
+									next_url = l.substring(startIdx + 1, endIdx);  // url is enclosed in <>
+								}
+							}
+						}
+					}
+				} catch (Exception e2) {
+					// Silently continue if Link header parsing fails
+				}
 				uc.disconnect();
 			}
 		} catch (Exception e) {	
-			scores.put("Error", e.getMessage()==null?e.toString():e.getMessage());
+			scores.put("Error", e.getMessage() == null ? e.toString() : e.getMessage());
 		}
 		return scores;
 	}
