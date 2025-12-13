@@ -44,38 +44,120 @@ import com.googlecode.objectify.annotation.Id;
 import com.googlecode.objectify.annotation.Ignore;
 import com.googlecode.objectify.annotation.Index;
 
+/**
+ * Question represents a learning assessment question entity supporting multiple question types.
+ * 
+ * This entity manages questions used in assignments and quizzes, supporting the following types:
+ * - multiple_choice: Single correct answer from list of choices
+ * - checkbox: Multiple correct answers (all must be selected)
+ * - true_false: Boolean true/false answer
+ * - fill_in_blank: Text-based short answer
+ * - numeric: Numeric answer with precision/significant figure validation
+ * 
+ * Question Features:
+ * - Parameterized questions: Uses variables a,b,c,d with ranges (e.g., "a 3:6 b 5:8")
+ * - Math expression parsing: Supports equations with #-delimited expressions
+ * - Smart numeric formatting: Decimal, scientific notation, or significant figures
+ * - Scrambled choices: Can randomize multiple choice/checkbox options
+ * - Performance tracking: Tracks correct answers and total attempts
+ * 
+ * The prompt text supports:
+ * - Mathematical expressions delimited by # (e.g., "#3*a+2#")
+ * - Parameterized variables a,b,c,d that are substituted before parsing
+ * - Fractions in format (|numerator|denominator|)
+ * - Text numbers like "forty-two" converted to digits
+ * 
+ * @see Assignment for question usage in assignments
+ * @see Topic for question organization
+ */
 @Entity
 public class Question implements Serializable, Cloneable {
 	private static final long serialVersionUID = 137L;
-	@Id 	Long id;
-	@Index	Long topicId; 
-	@Index	String assignmentType;
-	@Index	String type;
-			String prompt;
-			String correctAnswer;
-			String units;
-			List<String> choices = new ArrayList<String>();
-			double requiredPrecision=0;
-			int significantFigures = 0;
-			String parameterString;
-			boolean scrambleChoices;
-			boolean strictSpelling;
-			Integer nCorrectAnswers = null;
-			Integer nTotalAttempts = null;
-	@Ignore	int[] parameters = {0,0,0,0};
 	
+	/** Question ID (database key) */
+	@Id Long id;
+	
+	/** Topic ID this question belongs to (indexed for queries) */
+	@Index Long topicId; 
+	
+	/** Assignment type (indexed): quiz, homework, exam, etc. */
+	@Index String assignmentType;
+	
+	/** Question type (indexed): multiple_choice, checkbox, true_false, fill_in_blank, numeric */
+	@Index String type;
+	
+	/** Question prompt/stem (supports math expressions with # delimiters and variables a,b,c,d) */
+	String prompt;
+	
+	/** Correct answer(s) - varies by type: single char for multiple_choice, string for checkbox, etc. */
+	String correctAnswer;
+	
+	/** Units of measurement for numeric answers (e.g., "kg", "m/s", "%") */
+	String units;
+	
+	/** List of answer choices for multiple_choice and checkbox questions */
+	List<String> choices = new ArrayList<String>();
+	
+	/** Required precision for numeric answers (e.g., 0.01 for 2 decimal places; 0.0 = exact match required) */
+	double requiredPrecision = 0;
+	
+	/** Number of significant figures for numeric answers (0 = no sig fig requirement) */
+	int significantFigures = 0;
+	
+	/** Parameter definition string: "a 3:6 b 5:8 c -3:3 d 1:1" defines ranges for random values */
+	String parameterString;
+	
+	/** Whether to randomize choice order for multiple_choice and checkbox questions */
+	boolean scrambleChoices;
+	
+	/** Whether fill_in_blank answers must match spelling exactly */
+	boolean strictSpelling;
+	
+	/** Count of student responses marked as correct (for analytics) */
+	Integer nCorrectAnswers = null;
+	
+	/** Total count of student responses (for analytics) */
+	Integer nTotalAttempts = null;
+	
+	/** Runtime parameter values: a, b, c, d (not persisted; set by setParameters()) */
+	@Ignore int[] parameters = {0, 0, 0, 0};
+	
+	/** Default constructor for Objectify ORM deserialization */
 	Question() {}
 
+	/**
+	 * Constructs a Question with the specified type.
+	 * @param type the question type (multiple_choice, checkbox, true_false, fill_in_blank, numeric)
+	 */
 	Question(String type) {
 		this.type = type;
 		this.correctAnswer = "";
 		this.parameterString = "";
 	}
 	
-
-	Question (long topicId,String prompt,String type,List<String> choices,
-			double requiredPrecision,int significantFigures,String correctAnswer,String units,int pointValue,String parameterString,
-			String hint,String solution,String authorId,String contributorId,String editorId,String notes) {
+	/**
+	 * Constructs a complete Question with all properties.
+	 * 
+	 * @param topicId the topic this question belongs to
+	 * @param prompt the question text (supports # delimited math expressions and variables)
+	 * @param type the question type
+	 * @param choices list of answer choices (for multiple_choice and checkbox)
+	 * @param requiredPrecision precision requirement for numeric answers
+	 * @param significantFigures significant figures requirement for numeric answers
+	 * @param correctAnswer the correct answer or answers
+	 * @param units units of measurement for numeric answers
+	 * @param pointValue point value for this question
+	 * @param parameterString parameter definitions (e.g., "a 3:6 b 5:8")
+	 * @param hint hint text for students
+	 * @param solution detailed solution text
+	 * @param authorId user ID of question author
+	 * @param contributorId user ID of contributor
+	 * @param editorId user ID of editor
+	 * @param notes internal notes about the question
+	 */
+	Question (long topicId, String prompt, String type, List<String> choices,
+			double requiredPrecision, int significantFigures, String correctAnswer, String units, int pointValue, String parameterString,
+			String hint, String solution, String authorId, String contributorId, String editorId, String notes) {
 		this.topicId = topicId;
 		this.prompt = prompt;
 		this.type = type;
@@ -108,6 +190,18 @@ public class Question implements Serializable, Cloneable {
 		}
 	}
 	
+	/**
+	 * Returns the correct answer(s) formatted as HTML for display.
+	 * 
+	 * The formatting varies by question type:
+	 * - multiple_choice: Returns the selected choice text
+	 * - checkbox: Returns an HTML list of all correct choices
+	 * - true_false: Returns the boolean answer
+	 * - fill_in_blank: Returns the first correct answer
+	 * - numeric: Returns the parsed numerical value with optional units
+	 * 
+	 * @return HTML-formatted correct answer string, or null if type is unrecognized
+	 */
 	public String getCorrectAnswer() {
 		switch (type) {
 		case "multiple_choice":
@@ -115,7 +209,7 @@ public class Question implements Serializable, Cloneable {
 		case "true_false":
 			return correctAnswer + "<br/><br/>";
 		case "checkbox":
-			StringBuffer buf = new StringBuffer("<ul>");
+			StringBuilder buf = new StringBuilder("<ul>");
 			for (int i=0; i<correctAnswer.length(); i++) {
 				buf.append("<li>" + choices.get(correctAnswer.charAt(i)-'a') + "</li>");
 			}
@@ -172,6 +266,19 @@ public class Question implements Serializable, Cloneable {
 		return 0; //default case
 	}
 	
+	/**
+	 * Parses a string containing mathematical expressions and variables.
+	 * 
+	 * This method:
+	 * 1. Converts fractions (|numerator|denominator|) to HTML form
+	 * 2. Converts text numbers (e.g., "forty-two") to digits
+	 * 3. Substitutes parameters a,b,c,d with their current values
+	 * 4. Evaluates mathematical expressions delimited by #
+	 * 5. Formats output based on significant figures requirement
+	 * 
+	 * @param raw the raw string potentially containing math expressions and variables
+	 * @return the parsed and formatted string, or empty string if null
+	 */
 	public String parseString(String raw) {
 		int itemType = getNumericItemType();
 		switch (itemType) {
@@ -204,7 +311,7 @@ public class Question implements Serializable, Cloneable {
 
 		if (raw == null) raw = "";
 		String[] pieces = raw.split("#");
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		
 		for (int i=0;i<pieces.length;i++) {
 			try {
@@ -247,7 +354,7 @@ public class Question implements Serializable, Cloneable {
 	}
 	
 	public String print(String showWork,String studentAnswer,Integer attemptsRemaining) {
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		String placeholder = attemptsRemaining==null?"":(" (" + attemptsRemaining + " attempt" + (attemptsRemaining==1?"":"s") + " remaining)");
 		char choice = 'a';
 		List<Character> choice_keys = new ArrayList<Character>();
@@ -415,7 +522,7 @@ public class Question implements Serializable, Cloneable {
 		// this differs from printAll() because only the first of several 
 		// correct fill-in-word answers is presented, and choices are not scrambled
 		// showDetails enables display of Solution to numeric problems (default = true)
-		StringBuffer buf = new StringBuffer("<a name=" + this.id + "></a>");
+		StringBuilder buf = new StringBuilder("<a name=" + this.id + "></a>");
 		char choice = 'a';
 		switch (type) {
 		case "multiple_choice": // Multiple Choice
@@ -534,8 +641,8 @@ public class Question implements Serializable, Cloneable {
 
 	String getExplanation() {
 		// Compute an explanation
-		StringBuffer buf = new StringBuffer();
-		StringBuffer debug = new StringBuffer("Debug: ");
+		StringBuilder buf = new StringBuilder();
+		StringBuilder debug = new StringBuilder("Debug: ");
 		try {
 			BufferedReader reader = null;
 			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
@@ -883,27 +990,27 @@ public class Question implements Serializable, Cloneable {
 		if (oldString == null) return "";
 		// recursive method replaces single quotes with &#39; for HTML pages
 		int i = oldString.indexOf('\'',0);
-		return i<0?oldString:quot2html(new StringBuffer(oldString).replace(i,i+1,"&#39;").toString(),i);
+		return i<0?oldString:quot2html(new StringBuilder(oldString).replace(i,i+1,"&#39;").toString(),i);
 	}
 
 	static String quot2html(String oldString,int fromIndex) {
 		// recursive method replaces single quotes with &#39; for HTML pages
 		int i = oldString.indexOf('\'',fromIndex);
-		return i<0?oldString:quot2html(new StringBuffer(oldString).replace(i,i+1,"&#39;").toString(),i);
+		return i<0?oldString:quot2html(new StringBuilder(oldString).replace(i,i+1,"&#39;").toString(),i);
 	}
 
 	static String amp2html(String oldString) {
 		if (oldString == null) return "";
 		// recursive method replaces ampersands with &amp; for preloading Greek/special characters in text fields in HTML forms
 		int i = oldString.indexOf('&',0);
-		//		    return i<0?oldString:new StringBuffer(oldString).replace(i,i+1,"&amp;").toString();
-		return i<0?oldString:amp2html(new StringBuffer(oldString).replace(i,i+1,"&amp;").toString(),i+1);
+		//		    return i<0?oldString:new StringBuilder(oldString).replace(i,i+1,"&amp;").toString();
+		return i<0?oldString:amp2html(new StringBuilder(oldString).replace(i,i+1,"&amp;").toString(),i+1);
 	}
 
 	static String amp2html(String oldString,int fromIndex) {
 		// recursive method replaces ampersands with &amp; for preloading Greek/special characters in text fields in HTML forms
 		int i = oldString.indexOf('&',fromIndex);
-		return i<0?oldString:amp2html(new StringBuffer(oldString).replace(i,i+1,"&amp;").toString(),i+1);
+		return i<0?oldString:amp2html(new StringBuilder(oldString).replace(i,i+1,"&amp;").toString(),i+1);
 	}
 	
 	String parseFractions(String expression) {
