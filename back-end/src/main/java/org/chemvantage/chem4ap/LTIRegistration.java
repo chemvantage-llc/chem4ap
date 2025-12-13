@@ -49,33 +49,59 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
+/**
+ * LTI 1.3 Registration Handler Servlet
+ * 
+ * Manages LTI platform registration and setup for LMS systems connecting to Chem4AP.
+ * Supports both standard and dynamic (auto-discovery) registration workflows.
+ * 
+ * Standard Registration Flow:
+ * 1. User completes registration form with organization and contact details
+ * 2. Email sent with activation token and configuration details
+ * 3. Admin completes registration by providing platform credentials (Client ID, Deployment ID, URLs)
+ * 4. Deployment created and activation sent to user
+ * 
+ * Dynamic Registration Flow:
+ * 1. User submits registration with platform's OpenID Configuration URL
+ * 2. Chem4AP retrieves platform configuration automatically
+ * 3. Auto-discovery handles credentials and endpoints, user just confirms
+ * 4. Deployment created immediately upon successful platform registration
+ * 
+ * Supported LMS Platforms: Canvas, Brightspace, Moodle, Blackboard, Schoology, Sakai
+ * 
+ * @author ChemVantage
+ */
 @WebServlet(urlPatterns = {"/lti/registration","/lti/registration/"})
 public class LTIRegistration extends HttpServlet {
-
-	/* This servlet class is used to apply for and grant access to LTI connections between client
-	 * LMS platforms and the Chem4AP tool. The user will complete a short form with name, role,
-	 * email, organization, home page, and LMS type. and use case (testing or production).
-	 * Requests for LTIv1.1 credentials were discontinued in 2021.
-	 * The workflow path for LTIv1.3 requests is:
-	 *   1) All users complete a basic form giving information about their org and the LTI request. If the
-	 *      launch uses Dynamic Registration, this information is used to eliminate some of the fields. If
-	 *      present, the OpenID Configuration URL and Registration Token are included in the POST to Chem4AP.
-	 *   2) Chem4AP validates the registration parameters, and if necessary, displays the form again
-	 *      to correct any errors.
-	 *   3) The registration email contains an activation token and, if necessary, the Chem4AP endpoints 
-	 *      and configuration JSON to complete the registration in the LMS. 
-	 *   4) The user then clicks the tokenized link, which contains the platformDeploymentId. If necessary, a form
-	 *      is presented to supply the client_id and deployment_id values and LMS endpoints. Otherwise, the 
-	 *      registration is complete.
-	 *      
-	 * For LTI Dynamic Registration, the Chem4AP endpoint is the same, and the form still applies, but
-	 * some information is automatically received (e.g., LMS product name, LTIAdvantage) so does not appear 
-	 * as an option on the form. When submitted, the registration success email is sent immediately.
-	 * 
-	 * */
 	
 	private static final long serialVersionUID = 137L;
-	static String price = "2";
+	
+	// Time constants (milliseconds)
+	private static final long REGISTRATION_TOKEN_VALIDITY_MS = 604800000L;  // 7 days
+	private static final long REGISTRATION_CODE_VALIDITY_MS = 31536000000L;  // 1 year
+	
+	// Pricing constant
+	private static final String DEFAULT_PRICE = "2";
+	static String price = DEFAULT_PRICE;
+	
+	// LMS type constants
+	private static final String LMS_CANVAS = "canvas";
+	private static final String LMS_BRIGHTSPACE = "brightspace";
+	private static final String LMS_MOODLE = "moodle";
+	private static final String LMS_BLACKBOARD = "blackboard";
+	private static final String LMS_SCHOOLOGY = "schoology";
+	private static final String LMS_SAKAI = "sakai";
+	
+	// LTI scope URIs
+	private static final String SCOPE_LINEITEM = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
+	private static final String SCOPE_LINEITEM_READONLY = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly";
+	private static final String SCOPE_RESULT_READONLY = "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly";
+	private static final String SCOPE_SCORE = "https://purl.imsglobal.org/spec/lti-ags/scope/score";
+	private static final String SCOPE_NRPS_MEMBERSHIP = "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";
+	
+	// LTI platform configuration claim
+	private static final String CLAIM_LTI_PLATFORM_CONFIG = "https://purl.imsglobal.org/spec/lti-platform-configuration";
+	private static final String CLAIM_LTI_TOOL_CONFIG = "https://purl.imsglobal.org/spec/lti-tool-configuration";
 	
 	@Override
 	public void init(ServletConfig config) throws ServletException {
@@ -115,7 +141,7 @@ public class LTIRegistration extends HttpServlet {
 	throws ServletException, IOException {
 		response.setContentType("text/html");
 		PrintWriter out = response.getWriter();
-		StringBuffer debug = new StringBuffer();
+		StringBuilder debug = new StringBuilder();
 		
 		String userRequest = request.getParameter("UserRequest");
 		if (userRequest==null) userRequest = "";
@@ -180,7 +206,7 @@ public class LTIRegistration extends HttpServlet {
 		String registration_token = request.getParameter("registration_token");
 		boolean dynamic = openid_configuration != null;
 		
-		StringBuffer buf = new StringBuffer(Util.banner);
+		StringBuilder buf = new StringBuilder(Util.banner);
 		
 		if (message != null) {
 			buf.append("<span style='color: #EE0000; border: 2px solid red'>&nbsp;" + message + " &nbsp;</span>");
@@ -228,7 +254,7 @@ public class LTIRegistration extends HttpServlet {
 			buf.append("Pricing:"
 					+ "<ul>"
 					+ "	<li>LTI registration and instructor accounts are free.</li>"
-					+ "	<li>Each student account costs only $2 USD per month or $8 USD per semester (5 months).</li>"
+					+ "	<li>Each student account costs only $" + DEFAULT_PRICE + " USD per month or $8 USD per semester (5 months).</li>"
 					+ "	<li>Institutions can purchase 1-year student licenses for $5 USD/each (10 license minimum). Contact admin@chemvantage.org for an invoice.</li>"
 					+ "</ul>\n");
 		}
@@ -247,6 +273,8 @@ public class LTIRegistration extends HttpServlet {
 	}
 	
 	String validateApplicationFormContents(HttpServletRequest request) throws Exception {
+		if (request == null) throw new IllegalArgumentException("HttpServletRequest parameter cannot be null");
+		
 		String sub = request.getParameter("sub");
 		String email = request.getParameter("email");
 		String aud = request.getParameter("aud");
@@ -255,12 +283,13 @@ public class LTIRegistration extends HttpServlet {
 		String lms_other = request.getParameter("lms_other");
 		String openid_configuration = request.getParameter("openid_configuration");
 		
-		if (sub.isEmpty() || email.isEmpty()) throw new Exception("All form fields are required. ");
+		if (sub == null || sub.isEmpty()) throw new IllegalArgumentException("Organization name (sub) is required.");
+		if (email == null || email.isEmpty()) throw new IllegalArgumentException("Email address is required.");
 		String regex = "^[A-Za-z0-9+_.-]+@(.+)$";		 
 		Pattern pattern = Pattern.compile(regex);
-		if (!pattern.matcher(email).matches()) throw new Exception("Your email address was not formatted correctly. ");
-		if (aud.isEmpty()) throw new Exception("Please enter your organization name.");
-		if (url.isEmpty()) throw new Exception("Please enter the URL for your organization's home page.");
+		if (!pattern.matcher(email).matches()) throw new IllegalArgumentException("Email address was not formatted correctly. Please use standard format (name@domain.com).");
+		if (aud == null || aud.isEmpty()) throw new IllegalArgumentException("Organization name (aud) is required. Please enter your organization name.");
+		if (url == null || url.isEmpty()) throw new IllegalArgumentException("Organization URL is required. Please enter the URL for your organization's home page.");
 		
 		if (!url.isEmpty() && !url.startsWith("http")) url = "https://" + url;
 		try {
@@ -270,27 +299,28 @@ public class LTIRegistration extends HttpServlet {
 		}
 
 		if (openid_configuration==null) {
-			if (lms==null) throw new Exception("Please select the type of LMS that you are connecting to Chem4AP. ");
-			if ("other".equals(lms) && (lms_other==null || lms_other.isEmpty())) throw new Exception("Please describe the type of LMS that you are connecting to Chem4AP. ");
+			if (lms==null || lms.isEmpty()) throw new IllegalArgumentException("LMS type is required. Please select the type of LMS that you are connecting to Chem4AP.");
+			if ("other".equals(lms) && (lms_other==null || lms_other.isEmpty())) throw new IllegalArgumentException("LMS description is required. Please describe the type of LMS that you are connecting to Chem4AP.");
 			if ("other".equals(lms)) lms = lms_other;
-			if (!request.getServerName().equals("localhost") && !reCaptchaOK(request)) throw new Exception("ReCaptcha tool was unverified. Please try again. ");
+			if (!request.getServerName().equals("localhost") && !reCaptchaOK(request)) throw new IllegalArgumentException("ReCaptcha verification failed. Please try again.");
 		}
 		
-		if (!"true".equals(request.getParameter("AcceptChem4APTOS"))) throw new Exception("Please read and accept the Chem4AP Terms of Service. ");
+		if (!"true".equals(request.getParameter("AcceptChem4APTOS"))) throw new IllegalArgumentException("Terms of Service acknowledgement is required. Please read and accept the Chem4AP Terms of Service.");
 
 		String iss = Util.getServerUrl();
 		
 		if (Util.projectId.equals("dev-chem4ap") ) {
 			String reg_code = request.getParameter("reg_code");
+			if (reg_code == null || reg_code.isEmpty()) throw new IllegalArgumentException("Registration code is required for development environment.");
 			Date now = new Date();
 			Date exp = new Date(User.encode(Long.parseLong(reg_code,16)));
-    		Date oneYearFromNow = new Date(now.getTime() + 31536000000L);
-    		if (exp.before(now) || exp.after(oneYearFromNow)) throw new Exception("Registration code was invalid or expired.");
+    		Date oneYearFromNow = new Date(now.getTime() + REGISTRATION_CODE_VALIDITY_MS);
+    		if (exp.before(now) || exp.after(oneYearFromNow)) throw new IllegalArgumentException("Registration code was invalid or expired.");
 		}
 		
 		// Construct a new registration token
 		Date now = new Date();
-		Date exp = new Date(now.getTime() + 604800000L); // seven days from now
+		Date exp = new Date(now.getTime() + REGISTRATION_TOKEN_VALIDITY_MS); // seven days from now
 		Algorithm algorithm = Algorithm.HMAC256(Util.getHMAC256Secret());
 		String token = JWT.create()
 				.withIssuer(iss)
@@ -339,7 +369,7 @@ public class LTIRegistration extends HttpServlet {
 		String iss = jwt.getIssuer();
 		String lms = jwt.getClaim("lms").asString();
 		
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		
 		buf.append("<h2>Chem4AP Registration</h2>");
 		buf.append("Name: " + name + " (" + email + ")<br/>");
@@ -391,7 +421,7 @@ public class LTIRegistration extends HttpServlet {
 	}
 
 	String clientIdForm(String token) {
-		StringBuffer buf = new StringBuffer("<h1>Chem4AP Registration</h1>");
+		StringBuilder buf = new StringBuilder("<h1>Chem4AP Registration</h1>");
 		String iss = null;
 		String sub = null;
 		String email = null;
@@ -491,6 +521,8 @@ public class LTIRegistration extends HttpServlet {
 	}
 	
 	String createDeployment(HttpServletRequest request) throws Exception {
+		if (request == null) throw new IllegalArgumentException("HttpServletRequest parameter cannot be null");
+		
 		DecodedJWT jwt = JWT.decode(request.getParameter("Token"));
 		String client_name = jwt.getSubject();
 		String email = jwt.getClaim("email").asString();
@@ -505,12 +537,12 @@ public class LTIRegistration extends HttpServlet {
 		String oauth_access_token_url = request.getParameter("OauthAccessTokenUrl");
 		String well_known_jwks_url = request.getParameter("JWKSUrl");
 		
-		if (client_id==null) throw new Exception("Client ID value is required.");
-		if (deployment_id==null) throw new Exception("Deployment ID value is required.");
-		if (platform_id==null || platform_id.isEmpty()) throw new Exception("Platform ID value is required.");
-		if (oidc_auth_url==null || oidc_auth_url.isEmpty()) throw new Exception("OIDC Auth URL is required.");
-		if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new Exception("OAuth Access Token URL is required.");
-		if (well_known_jwks_url==null || well_known_jwks_url.isEmpty()) throw new Exception("JSON Web Key Set URL is required.");
+		if (client_id==null || client_id.isEmpty()) throw new IllegalArgumentException("Client ID value is required.");
+		if (deployment_id==null || deployment_id.isEmpty()) throw new IllegalArgumentException("Deployment ID value is required.");
+		if (platform_id==null || platform_id.isEmpty()) throw new IllegalArgumentException("Platform ID value is required.");
+		if (oidc_auth_url==null || oidc_auth_url.isEmpty()) throw new IllegalArgumentException("OIDC Auth URL is required.");
+		if (oauth_access_token_url==null || oauth_access_token_url.isEmpty()) throw new IllegalArgumentException("OAuth Access Token URL is required.");
+		if (well_known_jwks_url==null || well_known_jwks_url.isEmpty()) throw new IllegalArgumentException("JSON Web Key Set URL is required.");
 			
 		Deployment d = new Deployment(platform_id,deployment_id,client_id,oidc_auth_url,oauth_access_token_url,well_known_jwks_url,client_name,email,organization,org_url,lms);
 		d.status = "pending";
@@ -549,11 +581,11 @@ public class LTIRegistration extends HttpServlet {
 		//config.addProperty("public_jwk_url", iss + "/jwks");
 		config.add("public_jwk", KeyStore.getJwk(KeyStore.getAKeyId(lms)));
 		  JsonArray scopes = new JsonArray();
-		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem");
-		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly");
-		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly");
-		  scopes.add("https://purl.imsglobal.org/spec/lti-ags/scope/score");
-		  scopes.add("https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
+		  scopes.add(SCOPE_LINEITEM);
+		  scopes.add(SCOPE_LINEITEM_READONLY);
+		  scopes.add(SCOPE_RESULT_READONLY);
+		  scopes.add(SCOPE_SCORE);
+		  scopes.add(SCOPE_NRPS_MEMBERSHIP);
 		config.add("scopes", scopes);
 		  JsonArray extensions = new JsonArray();
 		    JsonObject ext = new JsonObject();
@@ -616,25 +648,33 @@ public class LTIRegistration extends HttpServlet {
     }
 	
 	void validateOpenIdConfigurationURL(String openIdConfigurationURL, JsonObject openIdConfiguration) throws Exception {
+		if (openIdConfigurationURL == null || openIdConfigurationURL.isEmpty()) throw new IllegalArgumentException("OpenID configuration URL is required.");
+		if (openIdConfiguration == null) throw new IllegalArgumentException("OpenID configuration object is required.");
+		
 		try {
-			URL issuer = new URL(openIdConfiguration.get("issuer").getAsString());
+			JsonElement issuerElement = openIdConfiguration.get("issuer");
+			if (issuerElement == null) throw new IllegalArgumentException("issuer field not found in OpenID configuration.");
+			
+			URL issuer = new URL(issuerElement.getAsString());
 			URL config = new URL(openIdConfigurationURL);
-			if (!issuer.getProtocol().contains("https")) throw new Exception("Issuer protocol must be https:// ");
-			if (!config.getProtocol().contains("https")) throw new Exception("OpenID configuration URL protocol must be https:// ");
-			if (!issuer.getHost().equals(config.getHost())) throw new Exception("Host names of issuer and openid_configuration URL must match. ");
-			if (config.getRef() != null) throw new Exception("OpenID configuration URL must not contain any fragmant parameter. ");
+			if (!issuer.getProtocol().contains("https")) throw new IllegalArgumentException("Issuer protocol must be https:// (not " + issuer.getProtocol() + ").");
+			if (!config.getProtocol().contains("https")) throw new IllegalArgumentException("OpenID configuration URL protocol must be https:// (not " + config.getProtocol() + ").");
+			if (!issuer.getHost().equals(config.getHost())) throw new IllegalArgumentException("Host names must match: issuer=" + issuer.getHost() + ", openid_configuration=" + config.getHost() + ".");
+			if (config.getRef() != null) throw new IllegalArgumentException("OpenID configuration URL must not contain a fragment parameter. Found: " + config.getRef());
 		} catch (Exception e) {
 			throw new Exception("Invalid openid_configuration from " + openIdConfigurationURL + ": " + e.getMessage());
 		}		
 	}
 	
 	JsonObject postRegistrationRequest(JsonObject openIdConfiguration,HttpServletRequest request) throws Exception {
+		if (openIdConfiguration == null) throw new IllegalArgumentException("OpenID configuration is required.");
+		if (request == null) throw new IllegalArgumentException("HttpServletRequest parameter cannot be null");
 		
 		String registrationToken = request.getParameter("registration_token");
-		StringBuffer registrationResponseBuffer = new StringBuffer();
+		StringBuilder registrationResponseBuffer = new StringBuilder();
 		JsonObject registrationResponse = new JsonObject();;
 		JsonObject regJson = new JsonObject();
-		StringBuffer debug = new StringBuffer("a");
+		StringBuilder debug = new StringBuilder("a");
 
 		regJson.addProperty("application_type","web");
 		JsonArray grantTypes = new JsonArray();
@@ -661,7 +701,7 @@ public class LTIRegistration extends HttpServlet {
 		regJson.addProperty("client_uri", iss);
 		regJson.addProperty("tos_uri", iss + "/terms_and_conditions.html");
 		regJson.addProperty("policy_uri", iss + "/privacy_policy.html");
-		regJson.addProperty("scope", "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly https://purl.imsglobal.org/spec/lti-ags/scope/score https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly");
+		regJson.addProperty("scope", SCOPE_LINEITEM + " " + SCOPE_LINEITEM_READONLY + " " + SCOPE_RESULT_READONLY + " " + SCOPE_SCORE + " " + SCOPE_NRPS_MEMBERSHIP);
 		JsonObject ltiToolConfig = new JsonObject();
 		ltiToolConfig.addProperty("domain", domain);
 		ltiToolConfig.addProperty("description",  "Chem4AP is an Open Education Resource for AP Chemistry.");
@@ -682,7 +722,7 @@ public class LTIRegistration extends HttpServlet {
 		deepLinking.addProperty("label", "Chem4AP" + (iss.contains("dev-chem4ap")?" Development":""));
 		debug.append("c");
 		try {
-			JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
+			JsonArray messagesSupported = openIdConfiguration.get(CLAIM_LTI_PLATFORM_CONFIG).getAsJsonObject().get("messages_supported").getAsJsonArray();
 			Iterator<JsonElement> iterator = messagesSupported.iterator();
 			JsonObject message;
 			while (iterator.hasNext()) {
@@ -702,7 +742,7 @@ public class LTIRegistration extends HttpServlet {
 		resourceLaunch.addProperty("label", "Chem4AP" + (iss.contains("dev-chem4ap")?" Development":""));
 		debug.append("e");
 		try {
-			JsonArray messagesSupported = openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("messages_supported").getAsJsonArray();
+			JsonArray messagesSupported = openIdConfiguration.get(CLAIM_LTI_PLATFORM_CONFIG).getAsJsonObject().get("messages_supported").getAsJsonArray();
 			Iterator<JsonElement> iterator = messagesSupported.iterator();
 			JsonObject message;
 			while (iterator.hasNext()) {
@@ -717,10 +757,12 @@ public class LTIRegistration extends HttpServlet {
 		ltiMessages.add(resourceLaunch);
 		debug.append("f");
 		ltiToolConfig.add("messages", ltiMessages);
-		regJson.add("https://purl.imsglobal.org/spec/lti-tool-configuration", ltiToolConfig);
+		regJson.add(CLAIM_LTI_TOOL_CONFIG, ltiToolConfig);
 		byte[] json_bytes = regJson.toString().getBytes("utf-8");
 
-		String reg_endpoint = openIdConfiguration.get("registration_endpoint").getAsString();
+		JsonElement regEndpointElement = openIdConfiguration.get("registration_endpoint");
+		if (regEndpointElement == null) throw new IllegalArgumentException("registration_endpoint not found in OpenID configuration.");
+		String reg_endpoint = regEndpointElement.getAsString();
 		debug.append("b");
 
 		URL u = new URL(reg_endpoint);
@@ -732,7 +774,7 @@ public class LTIRegistration extends HttpServlet {
 		uc.setRequestProperty("Accept", "application/json");
 
 		try {
-			switch (openIdConfiguration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString()) {
+			switch (openIdConfiguration.get(CLAIM_LTI_PLATFORM_CONFIG).getAsJsonObject().get("product_family_code").getAsString()) {
 			case "moodle": 
 				if (iss.equals("https://www.chem4ap.com")) uc.setRequestProperty("Host", "www.chem4ap.com"); // prevents code 400 failure in Moodle due to getRemoteHost()->chem4ap.appspot.com
 				break;
@@ -807,7 +849,7 @@ public class LTIRegistration extends HttpServlet {
 	}
 	
 	String successfulRegistrationRequestPage(JsonObject openid_configuration, HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		buf.append(Util.head("LTI Registration") + "<h1>Chem4AP</h1>");
 		buf.append("<h2>Your Registration Request Was Successful</h2>"
 				+ "The LTI Advantage deployment was created in Chem4AP and in your LMS.<br/>"
@@ -827,7 +869,7 @@ public class LTIRegistration extends HttpServlet {
 
 		String lms = null;
 		try {
-			lms = openid_configuration.get("https://purl.imsglobal.org/spec/lti-platform-configuration").getAsJsonObject().get("product_family_code").getAsString();
+			lms = openid_configuration.get(CLAIM_LTI_PLATFORM_CONFIG).getAsJsonObject().get("product_family_code").getAsString();
 		} catch (Exception e) {}
 		
 		switch (lms) {
@@ -867,7 +909,7 @@ public class LTIRegistration extends HttpServlet {
 	}
 	
 	static void sendApprovalEmail(Deployment d, HttpServletRequest request) {
-		StringBuffer buf = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
 		String iss = Util.getServerUrl();
 		
 		buf.append("<h2>Chem4AP Registration Success</h2>"
