@@ -72,11 +72,9 @@ public class LTIMessage {  // utility for sending LTI-compliant "POX" or "REST+J
 	// OAuth token validity and caching constants (milliseconds)
 	private static final long TOKEN_CACHE_GRACE_MS = 300000L;  // 5 minutes: reuse token if valid beyond this time
 	private static final long TOKEN_REQUESTED_VALIDITY_MS = 900000L;  // 15 minutes: request token valid for this duration
-	private static final int HTTP_CONNECT_TIMEOUT_MS = 15000;  // 15 seconds: HTTP connection timeout
 	
 	// LTI 1.3 OAuth scope URIs
 	private static final String SCOPE_AGS_LINEITEM = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem";
-	private static final String SCOPE_AGS_LINEITEM_READONLY = "https://purl.imsglobal.org/spec/lti-ags/scope/lineitem.readonly";
 	private static final String SCOPE_AGS_RESULT_READONLY = "https://purl.imsglobal.org/spec/lti-ags/scope/result.readonly";
 	private static final String SCOPE_AGS_SCORE = "https://purl.imsglobal.org/spec/lti-ags/scope/score";
 	private static final String SCOPE_NRPS_MEMBERSHIP_READONLY = "https://purl.imsglobal.org/spec/lti-nrps/scope/contextmembership.readonly";

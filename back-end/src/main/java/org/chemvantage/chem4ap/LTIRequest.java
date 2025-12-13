@@ -2,6 +2,11 @@ package org.chemvantage.chem4ap;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
+/**
+ * LTI 1.3 Request Handler: Processes LTI launch requests from Canvas, Brightspace, Moodle, etc.
+ * Handles LtiResourceLinkRequest and LtiDeepLinkingRequest message types.
+ */
+
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URL;
@@ -36,6 +41,8 @@ import jakarta.servlet.http.HttpServletResponse;
 public class LTIRequest extends HttpServlet {
 
 	private static final long serialVersionUID = 137L;
+	private static final long DEEP_LINK_TOKEN_VALIDITY_MS = 5400000L;
+	private static final int DEFAULT_MAX_SCORE = 10;
 	
 	@Override
 	public void doPost(HttpServletRequest request, HttpServletResponse response) 
@@ -112,7 +119,7 @@ public class LTIRequest extends HttpServlet {
 	}
 	
 	static String contentPickerForm(User user, HttpServletRequest request,JsonObject claims) throws Exception {
-		StringBuffer buf = new StringBuffer(Util.head("Chem4AP Assignment Setup"));
+		StringBuilder buf = new StringBuilder(Util.head("Chem4AP Assignment Setup"));
 		try {
 		JsonObject settings = claims.get("https://purl.imsglobal.org/spec/lti-dl/claim/deep_linking_settings").getAsJsonObject();
 		boolean acceptsLtiResourceLink = settings.get("accept_types").getAsJsonArray().contains(new JsonPrimitive("ltiResourceLink"));
@@ -155,8 +162,8 @@ public class LTIRequest extends HttpServlet {
 	}
 	
 	private String deepLinkingResponseMessage(User user, JsonObject claims, String iss, String assignmentType, Long unitId) throws Exception {
-		StringBuffer buf = new StringBuffer();
-		StringBuffer debug = new StringBuffer();
+		StringBuilder buf = new StringBuilder();
+		StringBuilder debug = new StringBuilder();
 		String deep_link_return_url = null;
 		try {
 			String platform_id = claims.get("iss").getAsString();
@@ -166,9 +173,10 @@ public class LTIRequest extends HttpServlet {
 			String data = settings.get("data")==null?"":settings.get("data").getAsString();
 			
 			Date now = new Date();
-			Date exp = new Date(now.getTime() + 5400000L); // 90 minutes from now
+			Date exp = new Date(now.getTime() + DEEP_LINK_TOKEN_VALIDITY_MS); // 90 minutes from now
 			Deployment d = Deployment.getInstance(platform_id + "/" + deployment_id);
 			APChemUnit unit = ofy().load().type(APChemUnit.class).id(unitId).safe();
+			if (unit == null) throw new Exception("AP Chemistry unit with ID " + unitId + " was not found");
 			String title = assignmentType + " - " + unit.title;
 			
 			Assignment a = new Assignment(assignmentType,title,unitId,d.platform_deployment_id);
@@ -208,7 +216,7 @@ public class LTIRequest extends HttpServlet {
 			JsonObject item = new JsonObject();
 			item.addProperty("type", "ltiResourceLink");
 	
-			int maxScore = 10;
+			int maxScore = DEFAULT_MAX_SCORE;
 			item.addProperty("title", title);
 	
 			JsonObject lineitem = new JsonObject();
