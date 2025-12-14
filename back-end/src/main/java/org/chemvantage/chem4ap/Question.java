@@ -24,6 +24,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.text.Collator;
@@ -32,6 +33,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+
+import org.springframework.boot.autoconfigure.kafka.KafkaProperties.Retry.Topic;
 
 import com.bestcode.mathparser.IMathParser;
 import com.bestcode.mathparser.MathParserFactory;
@@ -681,28 +684,76 @@ public class Question implements Serializable, Cloneable {
 		return buf.toString(); 
 	}
 
+	String printForSage() {
+		StringBuffer buf = new StringBuffer();
+		char choice = 'a';
+		List<Character> choice_keys = new ArrayList<Character>();
+		Random rand = new Random();
+		switch (type) {
+		case TYPE_MULTIPLE_CHOICE: // Multiple Choice
+			buf.append(prompt + "\n");
+			for (int i = 0; i < choices.size(); i++) {
+			 choice_keys.add(Character.valueOf((char)('a'+i)));
+			}
+			buf.append("Select only the best answer:\n");
+			while (choice_keys.size()>0) {
+				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
+				buf.append(choices.get(choice-'a') + "\n");
+			}
+			break;
+		case TYPE_TRUE_FALSE: // True/False
+			buf.append(prompt + "\n");
+			buf.append("Select true or false:\n");
+			buf.append("True\n");
+			buf.append("False\n");
+			break;
+		case TYPE_CHECKBOX: // Select Multiple
+			buf.append(prompt + "\n");
+			for (int i = 0; i < choices.size(); i++) {
+			 choice_keys.add(Character.valueOf((char)('a'+i)));
+			}
+			buf.append("Select all of the correct answers:\n");
+			while (choice_keys.size()>0) {
+				choice = choice_keys.remove(scrambleChoices?rand.nextInt(choice_keys.size()):0);
+				buf.append(choices.get(choice-'a') + "\n");
+			}
+			break;
+		case TYPE_FILL_IN_BLANK: // Fill-in-the-Word
+			buf.append("Fill in the blank with the correct word or phrase:\n" 
+					+ prompt + (units==null || units.isEmpty()?"":" _______________ " + units) + "\n");
+			break;
+		case TYPE_NUMERIC: // Numeric Answer
+			buf.append(parseString(prompt) + "\n");
+			switch (getNumericItemType()) {
+			case 0: buf.append("Enter the exact value: "); break;
+			case 1: buf.append("Enter the value with the appropriate number of significant figures:\n"); break;
+			case 2: int sf = (int)Math.ceil(-Math.log10(requiredPrecision/100.))+1;
+				buf.append("Include at least " + sf + " significant figures in your answer: \n"); break;
+			case 3: buf.append("Enter the value with the appropriate number of significant figures \n"); break;
+			default:
+			}
+			buf.append("____________" + parseString(units) + "\n");
+			break;        
+		}
+		return buf.toString();	
+	}
+	
 	String getExplanation() {
-		// Compute an explanation
-		StringBuilder buf = new StringBuilder();
-		StringBuilder debug = new StringBuilder("Debug: ");
+		StringBuffer buf = new StringBuffer();
+		StringBuffer debug = new StringBuffer("Debug: ");
 		try {
 			BufferedReader reader = null;
-			JsonObject api_request = new JsonObject();  // these are used to score essay questions using ChatGPT
-			api_request.addProperty("model",Util.getGPTModel());
-			//api_request.addProperty("max_tokens",600);
-			api_request.addProperty("temperature",0.4);
-			JsonArray messages = new JsonArray();
-			JsonObject m1 = new JsonObject();  // api request message
-			m1.addProperty("role", "system");
-			m1.addProperty("content","You are a tutor assisting a college student taking General Chemistry. "
-					+ "Explain why\n" + this.getCorrectAnswerForSage() + "\n"
-					+ "is the correct answer to the following question item:\n"
-			/*  Fix the prompt when this method is activated
-					+ this.printForSage() + "\n"
-			*/		+ "Format your response in HTML with LaTeX.");
-			messages.add(m1);
-			api_request.add("messages", messages);
-			URL u = new URL("https://api.openai.com/v1/chat/completions");
+			JsonObject api_request = new JsonObject();
+			api_request.addProperty("model", Util.getGPTModel());
+			  JsonObject prompt = new JsonObject();
+			  prompt.addProperty("id", Util.getExplanationPromptId());
+			    JsonObject variables = new JsonObject();
+			    variables.addProperty("question_item", this.printForSage());
+			    variables.addProperty("correct_answer", this.getCorrectAnswerForSage());
+			  prompt.add("variables", variables);
+			api_request.add("prompt", prompt);
+			
+			URL u = new URI(Util.getExplanationApiEndpoint()).toURL();
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setRequestMethod("POST");
 			uc.setDoInput(true);
@@ -715,21 +766,51 @@ public class Question implements Serializable, Cloneable {
 			os.write(json_bytes, 0, json_bytes.length);           
 			os.close();
 			
-			reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
-			JsonObject api_response = JsonParser.parseReader(reader).getAsJsonObject();
-			reader.close();
+			int response_code = uc.getResponseCode();
+			debug.append("HTTP Response Code: " + response_code);
 			
-			String explanation = api_response.get("choices").getAsJsonArray().get(0).getAsJsonObject().get("message").getAsJsonObject().get("content").getAsString();
+			JsonObject api_response = null;
+			if (response_code/100==2) {
+				reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));
+				api_response = JsonParser.parseReader(reader).getAsJsonObject();
+				debug.append(api_response.toString());
+				reader.close();
+			} else {
+				reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));
+				debug.append(JsonParser.parseReader(reader).getAsJsonObject().toString());
+				reader.close();
+			}
+			
+			// Find the output text buried in the response JSON:
+			JsonArray output = api_response.get("output").getAsJsonArray();
+			JsonObject message = null;
+			JsonObject output_text = null;
+			String explanation = null;
+			for (JsonElement element0 : output) {
+				message = element0.getAsJsonObject();
+				if (message.has("content")) {
+					JsonArray content = message.get("content").getAsJsonArray();
+					for (JsonElement element1 : content) {
+						output_text = element1.getAsJsonObject();
+						if (output_text.has("text")) {
+							explanation = output_text.get("text").getAsString();
+							if (explanation==null) throw new Exception("Failed to read api_response.");
+							break;
+						}
+					}
+					break;
+				}
+			}
 			debug.append("e");
 			
 			buf.append(explanation);
 		} catch (Exception e) {
-			buf.append("<br/>Sorry, an explanation is not available at this time. " + (e.getMessage()==null?e.toString():e.toString()));  // + "<p>" + debug.toString()) + "<p>");
+			buf.append("<br/>Sorry, an explanation is not available at this time. " + (e.getMessage()==null?e.toString():e.toString()) + "<p>" + debug.toString() + "<p>");
 		}
 		return buf.toString();
 	}
 
-	public void addAttemptSave(boolean isCorrect) {
+public void addAttemptSave(boolean isCorrect) {
 		if (nTotalAttempts==null) initializeCounters();
 		nTotalAttempts++;
 		if(isCorrect) nCorrectAnswers++;

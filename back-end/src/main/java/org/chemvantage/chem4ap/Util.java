@@ -217,6 +217,22 @@ public class Util {
 	private String gptModel = "ChangeMe";
 	
 	/**
+	 * Prompt ID for AI-generated question explanations.
+	 * Used to identify the explanation template in OpenAI API calls.
+	 * Retrieved via Util.getExplanationPromptId().
+	 * Initially null; uses default if not configured.
+	 */
+	private String explanationPromptId;
+	
+	/**
+	 * OpenAI API endpoint URL for explanation generation.
+	 * Used to submit explanation requests to OpenAI.
+	 * Retrieved via Util.getExplanationApiEndpoint().
+	 * Initially null; uses default if not configured.
+	 */
+	private String explanationApiEndpoint;
+	
+	/**
 	 * PayPal OAuth 2.0 client ID for subscription processing.
 	 * Used for login with PayPal integration.
 	 * Obtained from PayPal Developer Dashboard.
@@ -479,22 +495,19 @@ public class Util {
 	 */
 	static String head(String title) {
 		return "<!DOCTYPE html><html lang='en'>\n"
-				+ "<head>\n"
-				+ "  <meta charset='UTF-8' />\n"
-				+ "  <meta name='viewport' content='width=device-width, initial-scale=1.0' />\n"
-				+ "  <meta name='description' content='Chem4AP is an LTI app for teaching and learning AP Chemistry.' />\n"
-				+ "  <meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />\n"
-				+ "  <link rel='icon' href='images/logo.png' />\n"
-				+ "  <link rel='canonical' href='" + Util.getServerUrl() + "' />\n"
-				+ "  <title>Chem4P" + (title==null?"":" | " + title) + "</title>\n"
-				+ "  <!-- Font Family -->\n"
-				+ "  <link href='https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap' rel='stylesheet'/>\n"
-				+ "  <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css' integrity='sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T' crossorigin='anonymous'>"
-				//+ "  <!-- Google tag (gtag.js) --> "
-				//+ "  <script async src=\"https://www.googletagmanager.com/gtag/js?id=AW-942360432\"></script> "
-				//+ "  <script> window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'AW-942360432'); </script>"
-				+ "</head>\n"
-				+ "<body style='margin: 20px; font-family: Poppins'>\n";
+			+ "<head>\n"
+			+ "  <meta charset='UTF-8' />\n"
+			+ "  <meta name='viewport' content='width=device-width, initial-scale=1.0' />\n"
+			+ "  <meta name='description' content='Chem4AP is an LTI app for teaching and learning AP Chemistry.' />\n"
+			+ "  <meta http-equiv='Cache-Control' content='no-cache, no-store, must-revalidate' />\n"
+			+ "  <link rel='icon' href='images/logo.png' />\n"
+			+ "  <link rel='canonical' href='" + Util.getServerUrl() + "' />\n"
+			+ "  <title>Chem4P" + (title==null?"":" | " + title) + "</title>\n"
+			+ "  <!-- Font Family -->\n"
+			+ "  <link href='https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&family=Shantell+Sans:wght@300;400;500;600;700;800&display=swap' rel='stylesheet'/>\n"
+			+ "  <link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css' integrity='sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T' crossorigin='anonymous'>"
+			+ "</head>\n"
+			+ "<body style='margin: 20px; font-family: Poppins'>\n";
 	}
 	
 	/**
@@ -704,6 +717,32 @@ public class Util {
 	static String getGPTModel() {
 		refresh();
 		return u.gptModel;
+	}
+	
+	/**
+	 * Retrieves the prompt ID for AI-generated explanations.
+	 * 
+	 * Used by Question.getExplanation() to identify the prompt template
+	 * for generating student-facing explanations via OpenAI API.
+	 * 
+	 * @return prompt ID string for explanation generation
+	 */
+	static String getExplanationPromptId() {
+		refresh();
+		return u.explanationPromptId != null ? u.explanationPromptId : "pmpt_68ae17560ce08197a4584964c31e79510acd7153761d1f7b";
+	}
+	
+	/**
+	 * Retrieves the OpenAI API endpoint URL for explanation requests.
+	 * 
+	 * Used by Question.getExplanation() to construct API calls for
+	 * generating student-facing explanations.
+	 * 
+	 * @return API endpoint URL (e.g., https://api.openai.com/v1/responses)
+	 */
+	static String getExplanationApiEndpoint() {
+		refresh();
+		return u.explanationApiEndpoint != null ? u.explanationApiEndpoint : "https://api.openai.com/v1/responses";
 	}
 	
 	/**

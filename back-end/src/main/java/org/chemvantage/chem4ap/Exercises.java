@@ -77,6 +77,7 @@ public class Exercises extends HttpServlet {
 	private static final String USER_REQUEST_ASSIGN_TOPICS = "AssignTopics";
 	/** Request parameter value for synchronizing scores to LMS */
 	private static final String USER_REQUEST_SYNCHRONIZE_SCORES = "SynchronizeScores";
+	/** Request parameter value for requesting question explanation */
 	
 	// HTTP header and content type constants
 	/** HTTP Authorization header name for Bearer token authentication */
@@ -89,7 +90,9 @@ public class Exercises extends HttpServlet {
 	private static final String CONTENT_TYPE_JSON = "application/json; charset=UTF-8";
 	/** Authorization error message for LTI students */
 	private static final String ERROR_UNAUTHORIZED = "Unauthorized. You must launch this app from the link inside your LMS.";
-	
+	/** Request parameter value for requesting question explanation */
+	private static final String USER_REQUEST_EXPLANATION = "Explanation";
+
 	// Request parameter and field names
 	/** Request parameter name for user action/request type */
 	private static final String PARAM_USER_REQUEST = "UserRequest";
@@ -103,7 +106,7 @@ public class Exercises extends HttpServlet {
 	private static final String PARAM_ANSWER = "answer";
 	/** Request parameter name for parameterized question parameter value */
 	private static final String PARAM_PARAMETER = "parameter";
-	
+
 	// JSON response field names
 	/** JSON field name for authorization token in response */
 	private static final String JSON_TOKEN = "token";
@@ -143,6 +146,8 @@ public class Exercises extends HttpServlet {
 	private static final String CSS_CLASS_LIST_PREFIX = "list";
 	/** HTML button class for primary action buttons */
 	private static final String CSS_CLASS_BTN_PRIMARY = "btn btn-primary";
+	/** HTML button class for secondary action buttons */
+	private static final String CSS_CLASS_BTN_SECONDARY = "btn btn-secondary";
 	/** Default display style for visible elements */
 	private static final String CSS_DISPLAY_LIST_ITEM = "display:list-item";
 	/** CSS display style for hidden elements */
@@ -312,6 +317,18 @@ public class Exercises extends HttpServlet {
 			case USER_REQUEST_REVIEW_SCORES:
 				response.setContentType(CONTENT_TYPE_HTML);
 				out.println(reviewScores(request));
+				break;
+			case USER_REQUEST_EXPLANATION:
+				long questionId = Long.parseLong(request.getParameter("qid"));
+				String pParam = request.getParameter("p");
+				long parameter = (pParam != null) ? Long.parseLong(pParam) : 0;
+				Question question = ofy().load().type(Question.class).id(questionId).now();
+				if (question == null) {
+					out.println("<h2>Error: Question not found</h2>");
+				} else {
+					if (question.requiresParser()) question.setParameters(parameter);
+					out.println(question.getExplanation());
+				}
 				break;
 			default:
 				response.setContentType(CONTENT_TYPE_JSON);
@@ -576,7 +593,10 @@ public class Exercises extends HttpServlet {
 			   .append("<img src=").append(PATH_IMAGES).append("/").append(IMAGE_FEEDBACK)
 			   .append(" style='height:").append(IMAGE_HEIGHT).append(";vertical-align:").append(IMAGE_VERTICAL_ALIGN).append(";' alt='").append(IMAGE_ALT_FEEDBACK)
 			   .append("' title='").append(IMAGE_TITLE_FEEDBACK).append("' /></a></h2>")
-			   .append(FEEDBACK_CORRECT_ANSWER).append(q.getCorrectAnswer());
+			   .append(FEEDBACK_CORRECT_ANSWER).append(q.getCorrectAnswer())
+			   .append("<div id='explanation'>")
+			   .append("<button id='explainBtn' class='").append(CSS_CLASS_BTN_SECONDARY).append("' onclick='window.fetchExplanation(").append(questionId).append(", ").append(parameter).append(")'>Explain This</button>")
+			   .append("</div>");
 		}
 		
 		buf.append(MESSAGE_SCORE_PREFIX).append(s.totalScore).append(MESSAGE_SCORE_SUFFIX);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Question } from '../types';
 import FillInBlank from './FillInBlank';
 import Numeric from './Numeric';
@@ -18,6 +18,66 @@ const AnswerForm: React.FC<AnswerFormProps> = ({ tokenRef, question, page, setPa
   const [studentAnswer, setStudentAnswer] = useState<string>('');
   const [responseHtml, setResponseHtml] = useState<string | null>(null);
   const [waiting, setWaiting] = useState<boolean>(false);
+
+  // Define fetchExplanation globally so it can be called from HTML onclick handlers
+  useEffect(() => {
+    // Lazy-load MathJax only on first explanation request
+    let mathJaxLoaded = false;
+    const loadMathJax = () => {
+      if (mathJaxLoaded || (window as any).MathJax) return;
+      mathJaxLoaded = true;
+      
+      // Load polyfill for ES6 compatibility
+      const polyfill = document.createElement('script');
+      polyfill.src = 'https://polyfill.io/v3/polyfill.min.js?features=es6';
+      polyfill.async = true;
+      document.head.appendChild(polyfill);
+      
+      // Configure and load MathJax
+      (window as any).MathJax = {
+        tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] },
+        svg: { fontCache: 'global' }
+      };
+      
+      const script = document.createElement('script');
+      script.id = 'MathJax-script';
+      script.async = true;
+      script.src = 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      document.head.appendChild(script);
+    };
+    
+    (window as any).fetchExplanation = async (qid: number, param?: number) => {
+      // Load MathJax on first call
+      loadMathJax();
+      
+      const btn = document.getElementById('explainBtn') as HTMLButtonElement;
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Please wait a moment...';
+      }
+      const url = '/exercises?UserRequest=Explanation&qid=' + qid + (param == null ? '' : '&p=' + param);
+      try {
+        const response = await fetch(url);
+        const data = await response.text();
+        const explanation = document.getElementById('explanation');
+        if (explanation) {
+          explanation.innerHTML = data;
+          // Reprocess math in newly loaded content
+          if ((window as any).MathJax) {
+            (window as any).MathJax.typesetPromise([explanation]).catch((err: any) => console.log(err));
+          }
+        }
+        if (btn) {
+          btn.style.display = 'none';
+        }
+      } catch (error) {
+        console.error('Error fetching explanation:', error);
+        if (btn) {
+          btn.style.display = 'none';
+        }
+      }
+    };
+  }, []);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
