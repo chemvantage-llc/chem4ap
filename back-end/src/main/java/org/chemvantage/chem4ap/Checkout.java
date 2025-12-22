@@ -453,7 +453,7 @@ public class Checkout extends HttpServlet {
 		String title = (u != null && u.exp.before(now))?HEADING_SUBSCRIPTION_EXPIRED + df.format(u.exp):HEADING_SUBSCRIPTION;
 
 		buf.append("<h1>").append(title).append("</h1>\n")
-				.append(INTRO_TEXT)
+				.append(INTRO_TEXT + "<br/><br/>")
 				.append("<label><input type=").append(INPUT_TYPE_CHECKBOX).append(" id=").append(HTML_ID_TERMS)
 				.append(" onChange=").append(JS_FUNC_SHOW_PAYMENT).append("> ").append(LABEL_TERMS)
 				.append("<a href=/terms.html target=_blank>").append(LINK_TERMS).append("</a>.</label> <br/>")
