@@ -103,26 +103,26 @@ public class Deployment implements java.lang.Cloneable {
 		}
 		
 		// Validate all URLs use HTTPS protocol
-		URL platform = new URL(platform_id);
+		URL platform = new URI(platform_id).toURL();
 		if (!platform.getProtocol().equals("https")) {
 			throw new Exception("Platform URL must be secure (https): " + platform_id);
 		}
 		this.platformId = platform_id;
 		this.platform_deployment_id = platform_id + "/" + deployment_id;
 		
-		URL auth = new URL(oidc_auth_url);
+		URL auth = new URI(oidc_auth_url).toURL();
 		if (!auth.getProtocol().equals("https")) {
 			throw new Exception("OIDC auth URL must be secure (https): " + oidc_auth_url);
 		}
 		this.oidc_auth_url = auth.toString();
 		
-		URL token = new URL(oauth_access_token_url);
+		URL token = new URI(oauth_access_token_url).toURL();
 		if (!token.getProtocol().equals("https")) {
 			throw new Exception("OAuth token URL must be secure (https): " + oauth_access_token_url);
 		}
 		this.oauth_access_token_url = token.toString();		
 		
-		URL jwks = new URL(well_known_jwks_url);
+		URL jwks = new URI(well_known_jwks_url).toURL();
 		if (!jwks.getProtocol().equals("https")) {
 			throw new Exception("JWKS URL must be secure (https): " + well_known_jwks_url);
 		}

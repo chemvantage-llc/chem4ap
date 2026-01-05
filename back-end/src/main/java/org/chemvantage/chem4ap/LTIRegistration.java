@@ -29,6 +29,7 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.Date;
 import java.util.Iterator;
@@ -285,7 +286,7 @@ public class LTIRegistration extends HttpServlet {
 		
 		if (!url.isEmpty() && !url.startsWith("http")) url = "https://" + url;
 		try {
-			new URL(url);   // throws Exception if URL is not formatted correctly
+			new URI(url).toURL();   // throws Exception if URL is not formatted correctly
 		} catch (Exception e) {
 			throw new Exception("Invalid domain name (" + url + "). " + e.toString());
 		}
@@ -331,7 +332,7 @@ public class LTIRegistration extends HttpServlet {
 	boolean reCaptchaOK(HttpServletRequest request) throws Exception {
 		String queryString = "secret=" + Util.getReCaptchaSecret() + "&response=" 
 				+ request.getParameter("g-recaptcha-response") + "&remoteip=" + request.getRemoteAddr();
-		URL u = new URL("https://www.google.com/recaptcha/api/siteverify");
+		URL u = new URI("https://www.google.com/recaptcha/api/siteverify").toURL();
     	HttpURLConnection uc = (HttpURLConnection) u.openConnection();
     	uc.setDoOutput(true);
     	uc.setRequestMethod("POST");
@@ -559,7 +560,7 @@ public class LTIRegistration extends HttpServlet {
 	String getConfigurationJson(String iss,String lms) {
 		String domain = null;
 		try {
-			domain = new URL(iss).getHost();
+			domain = new URI(iss).toURL().getHost();
 		} catch (Exception e) { 
 			return "Domain was not valid."; 
 		}
@@ -622,7 +623,7 @@ public class LTIRegistration extends HttpServlet {
 	JsonObject getOpenIdConfiguration(HttpServletRequest request) throws Exception {
 	 	// This method retrieves the OpenID Configuration from the platform for Dynamic Registration
     	try {
-    		URL u = new URL(request.getParameter("openid_configuration"));
+    		URL u = new URI(request.getParameter("openid_configuration")).toURL();
     		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
     		uc.setDoInput(true);
     		uc.setRequestMethod("GET");
@@ -647,8 +648,8 @@ public class LTIRegistration extends HttpServlet {
 			JsonElement issuerElement = openIdConfiguration.get("issuer");
 			if (issuerElement == null) throw new IllegalArgumentException("issuer field not found in OpenID configuration.");
 			
-			URL issuer = new URL(issuerElement.getAsString());
-			URL config = new URL(openIdConfigurationURL);
+			URL issuer = new URI(issuerElement.getAsString()).toURL();
+			URL config = new URI(openIdConfigurationURL).toURL();
 			if (!issuer.getProtocol().contains("https")) throw new IllegalArgumentException("Issuer protocol must be https:// (not " + issuer.getProtocol() + ").");
 			if (!config.getProtocol().contains("https")) throw new IllegalArgumentException("OpenID configuration URL protocol must be https:// (not " + config.getProtocol() + ").");
 			if (!issuer.getHost().equals(config.getHost())) throw new IllegalArgumentException("Host names must match: issuer=" + issuer.getHost() + ", openid_configuration=" + config.getHost() + ".");
@@ -757,7 +758,7 @@ public class LTIRegistration extends HttpServlet {
 		String reg_endpoint = regEndpointElement.getAsString();
 		debug.append("b");
 
-		URL u = new URL(reg_endpoint);
+		URL u = new URI(reg_endpoint).toURL();
 		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 		uc.setRequestMethod("POST");
 		if (registrationToken != null) uc.setRequestProperty("Authorization", "Bearer " + registrationToken);

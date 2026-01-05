@@ -5,6 +5,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URL;
 import java.util.Date;
 import java.util.Enumeration;
@@ -723,7 +724,7 @@ public class Token extends HttpServlet {
 		if (platform_id == null || platform_id.isEmpty()) throw new IllegalArgumentException(ERROR_PLATFORM_ID_REQUIRED);
 		if (platform_id.endsWith("/")) platform_id = platform_id.substring(0,platform_id.length()-1);  // strip any trailing / from platform_id
 
-		URL platform = new URL(platform_id);
+		URL platform = new URI(platform_id).toURL();
 		if (!platform.getProtocol().equals("https")) throw new IllegalArgumentException(ERROR_NON_HTTPS_PLATFORM + platform.getProtocol());
 
 		// Take the optimistic route first; this should always work if the deployment_id has been provided, else return null;

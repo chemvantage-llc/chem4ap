@@ -9,6 +9,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.net.URI;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.security.Signature;
@@ -449,7 +450,7 @@ public class LTIRequest extends HttpServlet {
 		try {
 			// retrieve the public Java Web Key from the platform to verify the signature
 			if (url==null) throw new Exception("The deployment does not have a valid JWKS URL.");
-			URL jwks_url = new URL(url);
+			URL jwks_url = new URI(url).toURL();
 			JwkProvider provider = new UrlJwkProvider(jwks_url);
 			DecodedJWT decoded_token = JWT.decode(id_token);
 			String key_id = decoded_token.getKeyId();
