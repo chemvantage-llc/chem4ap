@@ -13,7 +13,7 @@ handlers:
   redirect_http_response_code: 301
     
 # Map everything in the web app directory to static copies  
-- url: /webapp
+- url: /
   static_dir: classes/META-INF/resources
   require_matching_file: True
 
