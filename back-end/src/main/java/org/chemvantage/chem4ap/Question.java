@@ -19,10 +19,7 @@ package org.chemvantage.chem4ap;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.Serializable;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -75,6 +72,7 @@ import com.googlecode.objectify.annotation.Index;
  */
 @Entity
 public class Question implements Serializable, Cloneable {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
 	/** Question ID (database key) */
@@ -375,10 +373,10 @@ public class Question implements Serializable, Cloneable {
 						buf.append(df.format(value)); 
 						break;
 					case FORMAT_PRECISION:
-						buf.append(String.format(fmt, value));
+						buf.append(fmt.formatted(value));
 						break;
 					case FORMAT_SIG_FIGS_PRECISION:
-						buf.append(String.format(fmt, value));
+						buf.append(fmt.formatted(value));
 						break;
 					default:
 						buf.append(value);

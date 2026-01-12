@@ -9,6 +9,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.net.URI;
 import java.net.URL;
 import java.security.SecureRandom;
@@ -41,6 +42,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet(urlPatterns = {"/lti"})
 public class LTIRequest extends HttpServlet {
 
+	@Serial
 	private static final long serialVersionUID = 137L;
 	private static final long DEEP_LINK_TOKEN_VALIDITY_MS = 5400000L;
 	private static final int DEFAULT_MAX_SCORE = 10;
@@ -253,14 +255,14 @@ public class LTIRequest extends HttpServlet {
 			byte[] pld = enc.encode(payload.toString().getBytes("UTF-8"));
 			
 			// Join the head and payload together with a period separator:
-			String jwt = String.format("%s.%s",new String(hdr),new String(pld));
+			String jwt = "%s.%s".formatted(new String(hdr), new String(pld));
 			
 			// Add a signature item to complete the JWT:
 			Signature signature = Signature.getInstance("SHA256withRSA");
 			signature.initSign(KeyStore.getRSAPrivateKey(d.rsa_key_id),new SecureRandom());
 			signature.update(jwt.getBytes("UTF-8"));
 			String sig = new String(enc.encode(signature.sign()));
-			jwt = String.format("%s.%s", jwt, sig);
+			jwt = "%s.%s".formatted(jwt, sig);
 			
 			// Create a form to be auto-submitted to the platform by the user_agent browser
 			buf.append("<form id=selections method=POST action='" + deep_link_return_url + "'>"

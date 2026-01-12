@@ -446,7 +446,7 @@ public class Util {
         	byte[] bytes = md.digest((userId + Util.getSalt()).getBytes(StandardCharsets.UTF_8));
         	StringBuilder sb = new StringBuilder();
             for (byte b : bytes) {
-                sb.append(String.format("%02x", b));
+                sb.append("%02x".formatted(b));
             }
             return sb.toString();
 		} catch (Exception e) {
@@ -541,13 +541,14 @@ public class Util {
 	 * @see #head(String) for complete page template
 	 */
 	static String foot() {
-		return  "<footer><p><hr style='width:600px;margin-left:0' />"
-				+ "<a style='text-decoration:none;color:#000080;font-weight:bold' href=/index.html>"
-				+ "Chem4AP</a> | "
-				+ "<a href=/terms_and_conditions.html>Terms and Conditions of Use</a> | "
-				+ "<a href=/privacy_policy.html>Privacy Policy</a> | "
-				+ "<a href=/copyright.html>Copyright</a></footer>\n"
-				+ "</body></html>";
+		return  """
+				<footer><p><hr style='width:600px;margin-left:0' />\
+				<a style='text-decoration:none;color:#000080;font-weight:bold' href=/index.html>\
+				Chem4AP</a> | \
+				<a href=/terms_and_conditions.html>Terms and Conditions of Use</a> | \
+				<a href=/privacy_policy.html>Privacy Policy</a> | \
+				<a href=/copyright.html>Copyright</a></footer>
+				</body></html>""";
 	}
 
 	/**

@@ -5,6 +5,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -121,6 +122,7 @@ import jakarta.servlet.http.HttpServletResponse;
  */
 @WebServlet(urlPatterns = {"/launch"})
 public class Launch extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 1L;
 	
 	// Token Management Constants
@@ -807,8 +809,8 @@ public class Launch extends HttpServlet {
 			.append("  document.getElementById('start' + unitId).style='display:inline';")
 			.append("}");
 		
-		if (!isPremium && !units.isEmpty() && units.get(0) != null) {
-			APChemUnit unitZero = units.get(0);
+		if (!isPremium && !units.isEmpty() && units.getFirst() != null) {
+			APChemUnit unitZero = units.getFirst();
 			script.append("unitClicked(").append(unitZero.id).append(");")
 				.append("document.querySelector('input[name=\"").append(UNIT_ID_PARAM).append("\"]').checked=true;")
 				.append("var firstInput = document.querySelector('input[name=\"").append(UNIT_ID_PARAM).append("\"]');")

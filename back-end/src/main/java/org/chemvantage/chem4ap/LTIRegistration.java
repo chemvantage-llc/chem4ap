@@ -22,12 +22,7 @@ package org.chemvantage.chem4ap;
 
 import static com.googlecode.objectify.ObjectifyService.ofy;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -74,7 +69,8 @@ import com.google.gson.JsonParser;
  */
 @WebServlet(urlPatterns = {"/lti/registration","/lti/registration/"})
 public class LTIRegistration extends HttpServlet {
-	
+
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
 	// Time constants (milliseconds)
@@ -357,7 +353,7 @@ public class LTIRegistration extends HttpServlet {
 		DecodedJWT jwt = JWT.decode(token);
 		String name = jwt.getSubject();
 		String email = jwt.getClaim("email").asString();
-		String org = jwt.getAudience().get(0);
+		String org = jwt.getAudience().getFirst();
 		String url = jwt.getClaim("url").asString();
 		String iss = jwt.getIssuer();
 		String lms = jwt.getClaim("lms").asString();
@@ -427,7 +423,7 @@ public class LTIRegistration extends HttpServlet {
 			iss = jwt.getIssuer();
 			sub = jwt.getSubject();
 			email = jwt.getClaim("email").asString();
-			aud = jwt.getAudience().get(0);
+			aud = jwt.getAudience().getFirst();
 			url = jwt.getClaim("url").asString();
 			lms = jwt.getClaim("lms").asString();
 			String client_id = "";
@@ -519,7 +515,7 @@ public class LTIRegistration extends HttpServlet {
 		DecodedJWT jwt = JWT.decode(request.getParameter("Token"));
 		String client_name = jwt.getSubject();
 		String email = jwt.getClaim("email").asString();
-		String organization = jwt.getAudience().get(0);
+		String organization = jwt.getAudience().getFirst();
 		String org_url = jwt.getClaim("url").asString();
 		String lms = jwt.getClaim("lms").asString();
 		

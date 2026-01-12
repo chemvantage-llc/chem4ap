@@ -6,6 +6,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Date;
@@ -64,6 +65,7 @@ import jakarta.servlet.http.HttpServletResponse;
  */
 @WebServlet(urlPatterns={"/exercises"})
 public class Exercises extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 1L;
 	
 	// UserRequest parameter constants for routing

@@ -1,5 +1,6 @@
 package org.chemvantage.chem4ap;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 
@@ -28,6 +29,7 @@ import com.googlecode.objectify.annotation.Index;
 @Entity
 public class APChemUnit implements Serializable {
 
+	@Serial
 	private static final long serialVersionUID = 1L;
 	
 	/** Unique unit identifier (database key) */

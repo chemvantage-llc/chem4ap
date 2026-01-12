@@ -5,6 +5,7 @@ import static com.googlecode.objectify.ObjectifyService.key;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.net.URI;
 import java.net.URL;
 import java.util.Date;
@@ -204,6 +205,7 @@ import com.googlecode.objectify.Key;
  */
 @WebServlet("/auth/token")
 public class Token extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 1L;
 	
 	// ========================================
@@ -742,7 +744,7 @@ public class Token extends HttpServlet {
 			Key<Deployment> kstart = key(Deployment.class, platform_id);
 			Key<Deployment> kend = key(Deployment.class, platform_id + "/~");
 			List<Deployment> range = ofy().load().type(Deployment.class).filterKey(">=", kstart).filterKey("<", kend).list();
-			if (range.size()==1) return range.get(0);
+			if (range.size()==1) return range.getFirst();
 			
 			// experimental: automatic deployment registration
 			

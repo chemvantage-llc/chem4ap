@@ -4,6 +4,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet("/admin")
 public class Admin extends HttpServlet {
 
+	@Serial
 	private static final long serialVersionUID = 1L;
 	
 	@Override

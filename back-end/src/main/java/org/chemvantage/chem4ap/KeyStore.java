@@ -4,6 +4,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
@@ -97,6 +98,7 @@ import com.google.gson.JsonObject;
  */
 @WebServlet(urlPatterns = {"/jwks", "/jwks/"})
 public class KeyStore extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 1L;
 	
 	// RSA-2048 key component size constants
@@ -522,7 +524,7 @@ public class KeyStore extends HttpServlet {
 		if (keys.isEmpty()) return null;
 		
 		if (LMS_CANVAS.equals(lms)) {
-			return keys.get(0).kid;
+			return keys.getFirst().kid;
 		} else {
 			// Random key for independent installations
 			int n = new Random().nextInt(keys.size());

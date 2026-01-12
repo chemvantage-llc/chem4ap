@@ -22,6 +22,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 
 import com.googlecode.objectify.Key;
 
@@ -83,6 +84,7 @@ import jakarta.servlet.http.HttpServletResponse;
  */
 @WebServlet("/report")
 public class ReportScore extends HttpServlet {
+	@Serial
 	private static final long serialVersionUID = 137L;
 	
 	// Request parameter constants
@@ -166,7 +168,7 @@ public class ReportScore extends HttpServlet {
 				else {
 					User user = ofy().load().type(User.class).filter("hashedId",Util.hashId(userId)).first().now();
 					if (user.isInstructor()) return; // no harm; LMS refused to post instructor score
-					debug.append(String.format(DEBUG_MSG_SUBMIT, userId, s.totalScore, a.id, a.platform_deployment_id, reply));
+					debug.append(DEBUG_MSG_SUBMIT.formatted(userId, s.totalScore, a.id, a.platform_deployment_id, reply));
 				}
 			}
 		} catch (Exception e) {

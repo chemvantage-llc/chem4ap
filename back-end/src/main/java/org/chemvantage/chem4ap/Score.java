@@ -317,7 +317,7 @@ public class Score {
 
 		// Add the key to the list of recent and trim, if necessary
 		recentQuestionKeys.add(k);
-		if (recentQuestionKeys.size() > 5) recentQuestionKeys.remove(0);
+		if (recentQuestionKeys.size() > 5) recentQuestionKeys.removeFirst();
 
 		return k.getId();
 	}

@@ -4,6 +4,7 @@ import static com.googlecode.objectify.ObjectifyService.ofy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.Serial;
 import java.util.List;
 import java.util.Map;
 
@@ -24,6 +25,7 @@ import jakarta.servlet.http.HttpServletResponse;
 @WebServlet("/feedback")
 public class Feedback extends HttpServlet {
 
+	@Serial
 	private static final long serialVersionUID = 1L;
 	
 	@Override
