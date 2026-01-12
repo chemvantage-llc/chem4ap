@@ -6,19 +6,23 @@ automatic_scaling:
   
 handlers:
 
-# This handler catches all URLs
-- url: /.*
-  script: auto
-  secure: always
-  redirect_http_response_code: 301
-    
-# Map everything in the web app directory to static copies  
+# Map everything in the web app directory to static copies
 - url: /
   static_dir: classes/META-INF/resources
   require_matching_file: True
+  secure: always
+  redirect_http_response_code: 301
 
 # All requests to the following URLs are restricted to admins or service accounts
 - url: /(units|questions|report|admin)
   login: admin
   script: auto
+  secure: always
+  redirect_http_response_code: 301
+
+# This handler catches all remaining URLs and routes to the Spring Boot app
+- url: /.*
+  script: auto
+  secure: always
+  redirect_http_response_code: 301
   
