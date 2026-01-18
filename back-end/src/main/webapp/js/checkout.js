@@ -25,43 +25,6 @@
    	else selectPaymentMethod.style = 'display:none';
   }
     
-  function redeemVoucher(sig,platform_deployment_id) {
-  	let voucher_code = document.getElementById("voucher_code").value;
-  	let proceed = document.getElementById("proceed");
-  	
-  	if (!voucher_code || voucher_code.length!=6) {
-  	  selectPaymentMethod.innerHTML = "<h2>Sorry, the code was missing or invalid.</h2>";
-  	  return null;
-  	}
-    fetch("/checkout", {
- 	  method: "POST",
-  	  headers:{
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body: new URLSearchParams({
-        "UserRequest": "RedeemVoucher",
-        "sig": sig,
-        "d": platform_deployment_id,
-        "voucher_code": voucher_code
-   	  })
-  	})
-  	.then (response => {
-  	  if (response.ok) {
-  	    return response.json();
-  	  } else {
-  	    throw new Error('API call failed. Response status code was ' + response.status);
-  	  }
-  	})
-  	.then (data => {
-  	  selectPaymentMethod.innerHTML = "<h2>Thank you</h2>Your voucher was redeemed successfully.<br/>Your subscription expires on " + data.exp;
-  	  document.getElementById('proceed').style = "display: inline";
-  	})
-  	.catch(error => {
-  	  selectPaymentMethod.innerHTML = "<h2>Sorry, the code was missing or invalid.</h2>";
-  	  console.error(error);
-  	});
-  }
-  
   function startCheckout() {
     nmonths = document.getElementById('nmonths').value;
     let value = price * (nmonths - Math.floor(nmonths/3));
@@ -88,7 +51,18 @@
         	"nmonths": nmonths
    	  	  })
         })
-        .then((response) => response.json())
+        .then((response) => {
+          if (response.ok) {
+            return response.text().then(text => {
+              if (!text) {
+                throw new Error('Empty response from server');
+              }
+              return JSON.parse(text);
+            });
+          } else {
+            throw new Error('API call failed. Response status code was ' + response.status);
+          }
+        })
         .then((order) => {
           return order.id 
         })
@@ -108,22 +82,31 @@
             "order_id": order_id
           })
         })
-        .then((response) => response.json())
+        .then((response) => {
+          if (response.ok) {
+            return response.text().then(text => {
+              if (!text) {
+                throw new Error('Empty response from server');
+              }
+              return JSON.parse(text);
+            });
+          } else {
+            throw new Error('API call failed. Response status code was ' + response.status);
+          }
+        })
         .then((order_details) => {
-          let intent_object = "captures";
-          selectPaymentMethod.innerHTML = "Thank you for your purchase: "
+          let assignmentType = document.getElementById('assignment_type').value;
+          selectPaymentMethod.innerHTML = "<h2>Thank you for your purchase</h2>"
             + order_details.purchase_units[0].payments["captures"][0].amount.value + " "
             + order_details.purchase_units[0].payments["captures"][0].amount.currency_code + "<br/>"
             + "Your " + nmonths + "-month Chem4AP subscription is now active and expires on " + order_details.expires + ".<br/>"
             + "OrderId: " + order_id + "<br/>"
-            + "Please print a copy of this page for your records.";
-          
-          document.getElementById('proceed').style = "display: inline";
-            
+            + "Please print a copy of this page for your records.<br/><br/>"
+            + "<a class='btn btn-primary' href='/" + assignmentType + "/index.html?t=" + order_details.token + "'>Proceed to Chem4AP</a><br/><br/>";
           payment_div.style = "display: none";
         })
         .catch((error) => {
-      	  console.log(err);
+      	  console.log(error);
       	  selectPaymentMethod.innerHTML = "Sorry, an error occurred. Your payment was not completed.";
       	  payment_div.style = "display: none";
         });       

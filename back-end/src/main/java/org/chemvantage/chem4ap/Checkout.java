@@ -85,227 +85,6 @@ public class Checkout extends HttpServlet {
 
 	@Serial
 	private static final long serialVersionUID = 137L;
-	
-	// Subscription pricing constants
-	/** Price per month in USD for subscription calculations */
-	private static final int PRICE_USD = 2;
-	/** Subscription option: 2 months */
-	private static final int MONTHS_2 = 2;
-	/** Subscription option: 5 months */
-	private static final int MONTHS_5 = 5;
-	/** Subscription option: 12 months */
-	private static final int MONTHS_12 = 12;
-	
-	// OAuth and API configuration constants
-	/** Grace period (milliseconds) before token expiration to refresh token */
-	private static final int TOKEN_CACHE_GRACE_MS = 5000;
-	/** HTTP connection timeout in milliseconds for PayPal API calls */
-	private static final int HTTP_TIMEOUT_MS = 15000;
-	
-	// HTTP header and content type constants
-	/** HTML content type with UTF-8 encoding */
-	private static final String CONTENT_TYPE_HTML = "text/html; charset=UTF-8";
-	/** JSON content type with UTF-8 encoding */
-	private static final String CONTENT_TYPE_JSON = "application/json; charset=UTF-8";
-	/** Form URL-encoded content type */
-	private static final String CONTENT_TYPE_FORM = "application/x-www-form-urlencoded";
-	
-	// Request parameter names
-	/** Request parameter name for user session signature */
-	private static final String PARAM_SIG = "sig";
-	/** Request parameter name for user request type (RedeemVoucher, CreateOrder, CompleteOrder) */
-	private static final String PARAM_USER_REQUEST = "UserRequest";
-	/** Request parameter name for deployment ID */
-	private static final String PARAM_D = "d";
-	/** Request parameter name for voucher code */
-	private static final String PARAM_VOUCHER_CODE = "voucher_code";
-	/** Request parameter name for number of months to purchase */
-	private static final String PARAM_NMONTHS = "nmonths";
-	/** Request parameter name for PayPal order ID */
-	private static final String PARAM_ORDER_ID = "order_id";
-	
-	// UserRequest parameter values
-	/** UserRequest parameter value for voucher redemption */
-	private static final String USER_REQUEST_REDEEM_VOUCHER = "RedeemVoucher";
-	/** UserRequest parameter value for creating new PayPal order */
-	private static final String USER_REQUEST_CREATE_ORDER = "CreateOrder";
-	/** UserRequest parameter value for completing PayPal payment capture */
-	private static final String USER_REQUEST_COMPLETE_ORDER = "CompleteOrder";
-	
-	// HTML input and element constants
-	/** HTML input type for hidden fields */
-	private static final String INPUT_TYPE_HIDDEN = "hidden";
-	/** HTML input type for text fields */
-	private static final String INPUT_TYPE_TEXT = "text";
-	/** HTML input type for checkbox */
-	private static final String INPUT_TYPE_CHECKBOX = "checkbox";
-	/** HTML input attribute for input size */
-	private static final String INPUT_SIZE_VOUCHER = "10";
-	/** CSS class for primary button styling */
-	private static final String CSS_CLASS_BTN_PRIMARY = "btn btn-primary";
-	
-	// Page and section constants
-	/** Page title for checkout page */
-	private static final String PAGE_TITLE = "Chem4AP Subscription";
-	/** Page title for logout page */
-	private static final String PAGE_TITLE_LOGOUT = "Logout";
-	/** Main heading prefix for subscription status */
-	private static final String HEADING_SUBSCRIPTION_EXPIRED = "Your Chem4AP subscription expired on ";
-	/** Main heading for active users */
-	private static final String HEADING_SUBSCRIPTION = "Individual Chem4AP Subscription";
-	/** Introductory text explaining subscription requirement */
-	private static final String INTRO_TEXT = "A subscription is required to access Chem4AP Units 1-9. First, please indicate your agreement with the two statements below by checking the boxes.";
-	/** Label text for terms and conditions checkbox */
-	private static final String LABEL_TERMS = "I understand and agree to the ";
-	/** Link text for terms and conditions */
-	private static final String LINK_TERMS = "Chem4AP Terms and Conditions of Use";
-	/** Label text for non-refundable fees checkbox */
-	private static final String LABEL_NOREFUNDS = "I understand that all Chem4AP subscription fees are non-refundable.";
-	/** Instruction text for voucher code entry */
-	private static final String INSTRUCTION_VOUCHER = "If you have a subscription voucher, please enter the code here: ";
-	/** Button text for voucher redemption */
-	private static final String BTN_REDEEM = "Redeem";
-	/** Separator text before alternative payment options */
-	private static final String SEPARATOR_OR = "Otherwise, please select the desired number of months you wish to purchase:";
-	/** Instruction text for payment method selection */
-	private static final String INSTRUCTION_PAYMENT = "Please select your method of payment:";
-	/** Button text for checkout initiation */
-	private static final String BTN_CHECKOUT = "Checkout";
-	/** Link text for proceeding to app */
-	private static final String LINK_PROCEED = "Proceed to Chem4AP";
-	
-	// HTML element IDs and CSS selectors
-	/** HTML element ID for client ID hidden input */
-	private static final String HTML_ID_CLIENT_ID = "client_id";
-	/** HTML element ID for sig hidden input */
-	private static final String HTML_ID_SIG = "sig";
-	/** HTML element ID for deployment ID hidden input */
-	private static final String HTML_ID_PLATFORM_ID = "platform_deployment_id";
-	/** HTML element ID for price hidden input */
-	private static final String HTML_ID_PRICE = "price";
-	/** HTML element ID for terms checkbox */
-	private static final String HTML_ID_TERMS = "terms";
-	/** HTML element ID for no-refunds checkbox */
-	private static final String HTML_ID_NOREFUNDS = "norefunds";
-	/** HTML element ID for voucher code input */
-	private static final String HTML_ID_VOUCHER_CODE = "voucher_code";
-	/** HTML element ID for months select dropdown */
-	private static final String HTML_ID_NMONTHS = "nmonths";
-	/** HTML element ID for payment method selection div */
-	private static final String HTML_ID_SELECT_PAYMENT = "select_payment_method";
-	/** HTML element ID for payment buttons container div */
-	private static final String HTML_ID_PAYMENT_DIV = "payment_div";
-	/** HTML element ID for proceed button div */
-	private static final String HTML_ID_PROCEED = "proceed";
-	/** HTML element ID for PayPal button container */
-	private static final String HTML_ID_PAYPAL_BUTTON = "paypal-button-container";
-	
-	// JavaScript constants
-	/** JavaScript function name to show/hide payment method selection */
-	private static final String JS_FUNC_SHOW_PAYMENT = "showSelectPaymentMethod()";
-	/** JavaScript function name to redeem voucher */
-	private static final String JS_FUNC_REDEEM = "redeemVoucher";
-	/** JavaScript function name to start checkout process */
-	private static final String JS_FUNC_START_CHECKOUT = "startCheckout()";
-	/** Script source URL for PayPal SDK */
-	private static final String SCRIPT_PAYPAL_SDK = "https://www.paypal.com/sdk/js";
-	/** URL path for client-side checkout JavaScript */
-	private static final String PATH_CHECKOUT_JS = "/js/checkout.js";
-	
-	// PayPal API constants
-	/** PayPal OAuth endpoint path */
-	private static final String PAYPAL_PATH_OAUTH = "/v1/oauth2/token";
-	/** PayPal orders endpoint path */
-	private static final String PAYPAL_PATH_ORDERS = "/v2/checkout/orders";
-	/** PayPal capture endpoint path suffix */
-	private static final String PAYPAL_PATH_CAPTURE = "/capture";
-	/** Base URL for PayPal API in production environment */
-	private static final String PAYPAL_BASE_URL_PROD = "https://api-m.paypal.com";
-	/** Base URL for PayPal API in sandbox/development environment */
-	private static final String PAYPAL_BASE_URL_SANDBOX = "https://api-m.sandbox.paypal.com";
-	/** Development project ID for detecting sandbox mode */
-	private static final String PROJECT_ID_DEV = "dev-chem4ap";
-	/** OAuth grant type for client credentials flow */
-	private static final String OAUTH_GRANT_TYPE = "grant_type=client_credentials";
-	/** HTTP Basic authentication prefix */
-	private static final String AUTH_BASIC_PREFIX = "Basic ";
-	/** HTTP Bearer token prefix */
-	private static final String AUTH_BEARER_PREFIX = "Bearer ";
-	/** PayPal request ID header name */
-	private static final String HEADER_PAYPAL_REQUEST_ID = "PayPal-Request-Id";
-	
-	// PayPal order and payment constants
-	/** PayPal order intent for immediate payment capture */
-	private static final String PAYPAL_INTENT_CAPTURE = "CAPTURE";
-	/** Currency code for USD */
-	private static final String CURRENCY_USD = "USD";
-	/** PayPal order status indicating completion */
-	private static final String PAYPAL_STATUS_COMPLETED = "COMPLETED";
-	
-	// JSON field names
-	/** JSON field name for access token */
-	private static final String JSON_ACCESS_TOKEN = "access_token";
-	/** JSON field name for token expiration time (seconds) */
-	private static final String JSON_EXPIRES_IN = "expires_in";
-	/** JSON field name for order ID in PayPal response */
-	private static final String JSON_ID = "id";
-	/** JSON field name for order status */
-	private static final String JSON_STATUS = "status";
-	/** JSON field name for response error */
-	private static final String JSON_ERROR = "error";
-	/** JSON field name for order expiration date in response */
-	private static final String JSON_EXP = "exp";
-	/** JSON field name for PayPal intent */
-	private static final String JSON_INTENT = "intent";
-	/** JSON field name for purchase units array */
-	private static final String JSON_PURCHASE_UNITS = "purchase_units";
-	/** JSON field name for payment source */
-	private static final String JSON_PAYMENT_SOURCE = "payment_source";
-	/** JSON field name for order amount */
-	private static final String JSON_AMOUNT = "amount";
-	/** JSON field name for currency code */
-	private static final String JSON_CURRENCY_CODE = "currency_code";
-	/** JSON field name for amount value */
-	private static final String JSON_VALUE = "value";
-	/** JSON field name for order description */
-	private static final String JSON_DESCRIPTION = "description";
-	/** JSON field name for expires timestamp in response */
-	private static final String JSON_EXPIRES = "expires";
-	
-	// Error and message constants
-	/** Error message for missing or invalid voucher */
-	private static final String ERROR_INVALID_VOUCHER = "Sorry, the voucher code was missing or invalid.";
-	/** Error message for previously redeemed voucher */
-	private static final String ERROR_DUPLICATE_VOUCHER = "This voucher code was redeemed previously by another user.";
-	/** Error message for missing login */
-	private static final String ERROR_NOT_LOGGED_IN = "You must be logged in through your class LMS to see this page.";
-	/** Error message for active premium user */
-	private static final String MESSAGE_SUBSCRIPTION_ACTIVE = "Your subscription is active.";
-	/** Error message for failed PayPal authentication */
-	private static final String ERROR_PAYPAL_AUTH = "PayPal authentication failed: ";
-	/** Error message for failed order creation */
-	private static final String ERROR_ORDER_CREATION = "Failed to create PayPal order: ";
-	/** Error email subject for PayPal auth failures */
-	private static final String EMAIL_SUBJECT_AUTH = "PayPal AuthToken Error";
-	/** Error email subject for PayPal order failures */
-	private static final String EMAIL_SUBJECT_ORDER = "PayPal OrderId Error";
-	/** Email recipient for error notifications */
-	private static final String EMAIL_ADMIN = "admin@chemvantage.org";
-	/** Email sender for error notifications */
-	private static final String EMAIL_FROM = "ChemVantage LLC";
-	
-	// Numeric and calculation constants
-	/** Divisor for determining HTTP response success (2xx codes) */
-	private static final int HTTP_SUCCESS_DIVISOR = 100;
-	/** Minimum HTTP status code for success responses */
-	private static final int HTTP_SUCCESS_CODE = 2;
-	/** Conversion factor from seconds to milliseconds */
-	private static final int MILLIS_PER_SECOND = 1000;
-	/** Discount calculation for 12-month option (33% discount = 1/3) */
-	private static final int DISCOUNT_12_MONTH = 3;
-	/** Placeholder for currency formatting */
-	private static final String CURRENCY_FORMAT = ".00";
-	
 	private JsonObject auth_json = new JsonObject();
 	
 	/**
@@ -332,21 +111,21 @@ public class Checkout extends HttpServlet {
 	@Override
 	public void doGet(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		response.setContentType(CONTENT_TYPE_HTML);
+		response.setContentType("text/html; charset=UTF-8");
 		PrintWriter out = response.getWriter();
-		User user = User.getUser(request.getParameter(PARAM_SIG));
+		User user = User.getUser(request.getParameter("sig"));
 		try {
 			if (user.isPremium()) {  // do not allow the user to use this page
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 				if (a != null) response.sendRedirect("/" + a.assignmentType.toLowerCase() + "?sig=" + user.getTokenSignature());
-				else out.println(MESSAGE_SUBSCRIPTION_ACTIVE);
+				else out.println("Your subscription is active.");
 				return;
 			}
-			String platform_deployment_id = user.platformId.equals(Util.getServerUrl())?user.platformId:ofy().load().type(Deployment.class).id(request.getParameter(PARAM_D)).now().platform_deployment_id;
+			String platform_deployment_id = user.platformId.equals(Util.getServerUrl())?user.platformId:ofy().load().type(Deployment.class).id(request.getParameter("d")).now().platform_deployment_id;
 			out.println(checkoutPage(user, platform_deployment_id));	
 		} catch (Exception e) {
 			ofy().delete().entity(user).now();
-			out.println(Util.head(PAGE_TITLE_LOGOUT) + "<h1>You have been logged out</h1>" + Util.foot());
+			out.println(Util.head("Logout") + "<h1>You have been logged out</h1>" + Util.foot());
 		}
 	}
 
@@ -371,42 +150,41 @@ public class Checkout extends HttpServlet {
 	@Override
 	public void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		response.setContentType(CONTENT_TYPE_JSON);
+		response.setContentType("application/json; charset=UTF-8");
 		PrintWriter out = response.getWriter();
 		User user = null;
 		JsonObject res = new JsonObject();
 		
 		try {
-			user = User.getUser(request.getParameter(PARAM_SIG));
-			if (user == null) throw new Exception(ERROR_NOT_LOGGED_IN);
+			user = User.getUser(request.getParameter("sig"));
+			if (user == null) throw new Exception("You must be logged in through your class LMS to see this page.");
 			
 			if (user.isPremium()) {  // do not allow the user to use this page
 				Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 				if (a != null) response.sendRedirect("/" + a.assignmentType.toLowerCase() + "?t=" + Util.getToken(user.getTokenSignature()));
-				else out.println(MESSAGE_SUBSCRIPTION_ACTIVE);
+				else out.println("Your subscription is active.");
 				return;
 			}
 			
-			String userRequest = request.getParameter(PARAM_USER_REQUEST);
+			String userRequest = request.getParameter("UserRequest");
 			switch (userRequest) {
-			case USER_REQUEST_REDEEM_VOUCHER:
-				Date exp = redeemVoucher(user, request);
-				res.addProperty(JSON_EXP, exp.toString());
-				out.println(res.toString());
+			case "RedeemVoucher":
+				response.setContentType("text/html; charset=UTF-8");
+				out.println(redeemVoucher(user, request));
 				break;
-			case USER_REQUEST_CREATE_ORDER:
+			case "CreateOrder":
 				String order_id = createOrder(user, request);
-				res.addProperty(JSON_ID, order_id);
+				res.addProperty("id", order_id);
 				out.println(res.toString());
 				break;
-			case USER_REQUEST_COMPLETE_ORDER:
+			case "CompleteOrder":
 				out.println(completeOrder(user, request).toString());
 				break;
 			default:
 				response.sendError(400);  // Bad request
 			}
 		} catch (Exception e) {
-			res.addProperty(JSON_ERROR, e.getMessage());
+			res.addProperty("error", e.getMessage());
 			response.sendError(401, res.toString());
 		}
 	}
@@ -437,54 +215,55 @@ public class Checkout extends HttpServlet {
 		DateFormat df = DateFormat.getDateTimeInstance(DateFormat.LONG, DateFormat.FULL);
 		Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
 		
-		buf.append(Util.head(PAGE_TITLE) + Util.banner);
+		buf.append(Util.head("Chem4AP Subscription") + Util.banner);
 		
 		// Store the PayPal client_id and user's sig value and platform_deployment_id in DOM elements so they can be accessed by javascript
-		buf.append("<input type=").append(INPUT_TYPE_HIDDEN).append(" id=").append(HTML_ID_CLIENT_ID).append(" value='").append(Util.getPayPalClientId()).append("' />");
-		buf.append("<input type=").append(INPUT_TYPE_HIDDEN).append(" id=").append(HTML_ID_SIG).append(" value=").append(user.getTokenSignature()).append(" />");
-		buf.append("<input type=").append(INPUT_TYPE_HIDDEN).append(" id=").append(HTML_ID_PLATFORM_ID).append(" value=").append(platform_deployment_id).append(" />");
-		buf.append("<input type=").append(INPUT_TYPE_HIDDEN).append(" id=").append(HTML_ID_PRICE).append(" value=").append(PRICE_USD).append(" />");
+		buf.append("<input type='hidden' id='client_id' value='" + Util.getPayPalClientId() + "' />\n");
+		buf.append("<input type='hidden' id='sig' value='" + user.getTokenSignature() + "' />\n");
+		buf.append("<input type='hidden' id='assignment_type' value='" + a.assignmentType.toLowerCase() + "' />\n");
+		buf.append("<input type='hidden' id='platform_deployment_id' value='" + platform_deployment_id + "' />\n");
+		buf.append("<input type='hidden' id='price' value='2' />\n");
 
 		PremiumUser u = ofy().load().type(PremiumUser.class).id(user.getHashedId()).now();		
-		String title = (u != null && u.exp.before(now))?HEADING_SUBSCRIPTION_EXPIRED + df.format(u.exp):HEADING_SUBSCRIPTION;
+		String title = (u != null && u.exp.before(now))?"Your Chem4AP subscription expired on " + df.format(u.exp):"Individual Chem4AP Subscription";
 
-		buf.append("<h1>").append(title).append("</h1>\n")
-				.append(INTRO_TEXT + "<br/><br/>")
-				.append("<label><input type=").append(INPUT_TYPE_CHECKBOX).append(" id=").append(HTML_ID_TERMS)
-				.append(" onChange=").append(JS_FUNC_SHOW_PAYMENT).append("> ").append(LABEL_TERMS)
-				.append("<a href=/terms.html target=_blank>").append(LINK_TERMS).append("</a>.</label> <br/>")
-				.append("<label><input type=").append(INPUT_TYPE_CHECKBOX).append(" id=").append(HTML_ID_NOREFUNDS)
-				.append(" onChange=").append(JS_FUNC_SHOW_PAYMENT).append("> ").append(LABEL_NOREFUNDS).append("</label> <br/><br/>");
+		buf.append("<h1>" + title + "</h1>\n" +
+				"A subscription is required to access Chem4AP Units 1-9. First, please indicate your agreement with the two statements below by checking the boxes.<br/><br/>" +
+				"<label><input type='checkbox' id='terms' onChange='showSelectPaymentMethod()'> " +
+				"I understand and agree to the <a href=/terms.html target=_blank>Chem4AP Terms and Conditions of Use</a>.</label> <br/>" +
+				"<label><input type='checkbox' id='norefunds' onChange='showSelectPaymentMethod()'> " +
+				"I understand that all Chem4AP subscription fees are non-refundable.</label> <br/><br/>");
 		
-		buf.append("<div id=").append(HTML_ID_SELECT_PAYMENT).append(" style='display:none'>\n");
+		buf.append("\n<div id='select_payment_method' style='display:none'>\n");
 
-		buf.append(INSTRUCTION_VOUCHER)
-				.append("<input id=").append(HTML_ID_VOUCHER_CODE).append(" type=").append(INPUT_TYPE_TEXT).append(" size=").append(INPUT_SIZE_VOUCHER).append(" />&nbsp;")
-				.append("<button class='").append(CSS_CLASS_BTN_PRIMARY).append("' onclick=").append(JS_FUNC_REDEEM).append("('").append(user.getTokenSignature()).append("','").append(platform_deployment_id).append("')>&nbsp;").append(BTN_REDEEM).append("</button><br/>");
-		
-		buf.append("<hr>").append(SEPARATOR_OR).append("<br/>")
-				.append("<div style='align: center'>")
-				.append("<select id=").append(HTML_ID_NMONTHS).append(">")
-				.append("<option value=").append(MONTHS_2).append(">").append(MONTHS_2).append(" months - $").append(MONTHS_2*PRICE_USD).append(" USD</option>")
-				.append("<option value=").append(MONTHS_5).append(">").append(MONTHS_5).append(" months - $").append(4*PRICE_USD).append(" USD</option>")
-				.append("<option value=").append(MONTHS_12).append(" selected>").append(MONTHS_12).append(" months - $").append(8*PRICE_USD).append(" USD</option>")
-				.append("</select>&nbsp;")
-				.append("<button class='").append(CSS_CLASS_BTN_PRIMARY).append("' onclick=").append(JS_FUNC_START_CHECKOUT).append(";>").append(BTN_CHECKOUT).append("</button>")
-				.append("</div>");		
+		buf.append("If you have a subscription voucher, please enter the code here: " +
+				"<form method=post action=/checkout>" +
+				"<input type='hidden' name='UserRequest' value='RedeemVoucher' />" +
+				"<input type='hidden' name='sig' value='" + user.getTokenSignature() + "' />" +
+				"<input type='hidden' name='d' value='" + platform_deployment_id + "' />" +
+				"<input type='text' name='VoucherCode' size='10' />&nbsp;" +
+				"<input type=submit class='btn btn-primary' value='Redeem' /><br/>" +
+				"</form>");
+				
+		buf.append("\n<hr>Otherwise, please select the desired number of months you wish to purchase:<br/>" +
+				"<div style='align: center'>" +
+				"<select id='nmonths'>" +
+				"<option value='2'>2 months - $" + (2*2) + " USD</option>" +
+				"<option value='5'>5 months - $" + (4*2) + " USD</option>" +
+				"<option value='12' selected>12 months - $" + (8*2) + " USD</option>" +
+				"</select>&nbsp;" +
+				"<button class='btn btn-primary' onclick='startCheckout();'>Checkout</button>" +
+				"</div>");		
 		buf.append("</div>");  // end of 'select_payment_method' div
 		
 		// Create a div for displaying the PayPal payment buttons (initially hidden)
-		buf.append("<div id=").append(HTML_ID_PAYMENT_DIV).append(" style='display: none'>")
-				.append(INSTRUCTION_PAYMENT).append("<br/><br/>")
-				.append("<div id='").append(HTML_ID_PAYPAL_BUTTON).append("'></div>");
+		buf.append("<div id='payment_div' style='display: none'>")
+				.append("Please select your method of payment:<br/><br/>")
+				.append("<div id='paypal-button-container'></div>");
 		buf.append("</div>");  // end of payment div
 		
-		buf.append("<div id=").append(HTML_ID_PROCEED).append(" style='display: none'><br/><br/>")
-				.append("<a class='").append(CSS_CLASS_BTN_PRIMARY).append("' href='").append("/").append(a.assignmentType.toLowerCase()).append("?t=").append(Util.getToken(user.getTokenSignature())).append("'>").append(LINK_PROCEED).append("</a><br/><br/>")
-				.append("</div>");
-		
-		buf.append("<script src='").append(SCRIPT_PAYPAL_SDK).append("?client-id=").append(Util.getPayPalClientId()).append("&enable-funding=venmo&disable-funding=paylater'></script>");
-		buf.append("<script src='").append(PATH_CHECKOUT_JS).append("?r=").append(new Random().nextInt()).append("'></script>");
+		buf.append("\n<script src='https://www.paypal.com/sdk/js?client-id=" + Util.getPayPalClientId() + "&enable-funding=venmo&disable-funding=paylater'></script>");
+		buf.append("\n<script src='/js/checkout.js?r=" + new Random().nextInt() + "'></script>");
 		buf.append(Util.foot());
 		
 		return buf.toString();
@@ -504,24 +283,40 @@ public class Checkout extends HttpServlet {
 	 * @see Voucher#activate()
 	 * @see PremiumUser
 	 */
-	Date redeemVoucher(User user, HttpServletRequest request) throws Exception {
+	String redeemVoucher(User user, HttpServletRequest request) throws Exception {
 		PremiumUser pu = null;
-		
-		String voucherCode = request.getParameter(PARAM_VOUCHER_CODE);
-		if (voucherCode == null || voucherCode.isEmpty()) throw new Exception(ERROR_INVALID_VOUCHER);
-		voucherCode = voucherCode.toUpperCase();
-		Voucher v = ofy().load().type(Voucher.class).id(voucherCode).now();
-		if (v == null) throw new Exception(ERROR_INVALID_VOUCHER);
-		if (!v.activate()) { // check for duplicate submission by same user
-			pu = ofy().load().type(PremiumUser.class).id(user.hashedId).safe();
-			if (pu.order_id.equals(v.code)) return pu.exp;
-			else throw new Exception(ERROR_DUPLICATE_VOUCHER);
-		}
+		StringBuilder buf = new StringBuilder();
+		buf.append(Util.head("Chem4AP Subscription") + Util.banner);
+		try {
+			String voucherCode = request.getParameter("VoucherCode");
+			if (voucherCode == null || voucherCode.isEmpty()) throw new Exception("Sorry, the voucher code was missing or invalid.");
+			voucherCode = voucherCode.toUpperCase();
+			Voucher v = ofy().load().type(Voucher.class).id(voucherCode).now();
+			if (v == null) throw new Exception("Sorry, the voucher code was missing or invalid.");
+				if (!v.activate()) { // check for duplicate submission by same user
+				pu = ofy().load().type(PremiumUser.class).id(user.hashedId).now();
+				if (pu==null ||!pu.order_id.equals(v.code)) throw new Exception("Sorry, the voucher code was missing or invalid.");
+			}
 
-		// code is valid, so create a new PremiumUser
-		Deployment deployment = ofy().load().type(Deployment.class).id(request.getParameter(PARAM_D)).safe();
-		if (pu == null) pu = new PremiumUser(user.getHashedId(), v.months, v.paid, deployment.getOrganization(), v.code); // constructor automatically saves new entity
-		return pu.exp;
+			// code is valid, so create a new PremiumUser
+			if (pu == null) {
+				Deployment deployment = ofy().load().type(Deployment.class).id(request.getParameter("d")).safe();
+				pu = new PremiumUser(user.getHashedId(), v.months, v.paid, deployment.getOrganization(), v.code); // constructor automatically saves new entity
+			}
+
+			buf.append("<h1>Voucher Redeemed Successfully</h1>\n");
+			buf.append("<p>Your Chem4AP subscription has been activated and will expire on <strong>" + pu.exp.toString() + "</strong>.</p>\n");
+			Assignment a = ofy().load().type(Assignment.class).id(user.getAssignmentId()).now();
+			buf.append("<a class='btn btn-primary' href='/" + a.assignmentType.toLowerCase() + "/index.html?t=" + Util.getToken(user.getTokenSignature()) + "'>Proceed to Chem4AP</a>\n");
+		} catch (Exception e) {
+			ofy().delete().entity(user).now();  // delete invalid user session
+			buf.append("<h1>Voucher Redemption Failed</h1>\n");
+			buf.append("<p>" + e.getMessage() + "</p>\n");
+			buf.append("<p>Launch this assignment again in your LMS to retry voucher redemption.</p>\n");
+		}
+		buf.append(Util.foot());
+		return buf.toString();
+
 	}
 	
 	/**
@@ -532,7 +327,7 @@ public class Checkout extends HttpServlet {
 	 * @throws IOException if error occurs reading response code
 	 */
 	private boolean isSuccessResponse(HttpURLConnection conn) throws IOException {
-		return conn.getResponseCode() / HTTP_SUCCESS_DIVISOR == HTTP_SUCCESS_CODE;
+		return conn.getResponseCode() / 100 == 2;
 	}
 	
 	/**
@@ -553,32 +348,32 @@ public class Checkout extends HttpServlet {
 		Date now = new Date();
 		
 		try {  // First, check if there is a cached non-expired auth token
-			if (!auth_json.has(JSON_ACCESS_TOKEN) || !auth_json.has(JSON_EXP)) {
+			if (!auth_json.has("access_token") || !auth_json.has("exp")) {
 				throw new Exception("Cache miss");
 			}
-			Date exp = new Date(auth_json.get(JSON_EXP).getAsLong());
+			Date exp = new Date(auth_json.get("exp").getAsLong());
 			if (exp.after(now)) {
-				return auth_json.get(JSON_ACCESS_TOKEN).getAsString();
+				return auth_json.get("access_token").getAsString();
 			}
 			throw new Exception("Token expired");
 		} catch (Exception e) {  // retrieve a new auth token from PayPal
 			
 			String auth = Base64.getEncoder().encodeToString((Util.getPayPalClientId()+":"+Util.getPayPalClientSecret()).getBytes());
 
-			String baseUrl = Util.projectId.equals(PROJECT_ID_DEV)?PAYPAL_BASE_URL_SANDBOX:PAYPAL_BASE_URL_PROD;
-			String body = OAUTH_GRANT_TYPE;
+			String baseUrl = Util.projectId.equals("dev-chem4ap")?"https://api-m.sandbox.paypal.com":"https://api-m.paypal.com";
+			String body = "grant_type=client_credentials";
 
-			URL u = new URI(baseUrl + PAYPAL_PATH_OAUTH).toURL();
+			URL u = new URI(baseUrl + "/v1/oauth2/token").toURL();
 			HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 			uc.setDoOutput(true);
 			uc.setDoInput(true);
 			uc.setRequestMethod("POST");
-			uc.setRequestProperty("Authorization", AUTH_BASIC_PREFIX + auth);
-			uc.setRequestProperty("Content-Type", CONTENT_TYPE_FORM);
-			uc.setRequestProperty("Accept", CONTENT_TYPE_JSON);
+			uc.setRequestProperty("Authorization", "Basic " + auth);
+			uc.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+			uc.setRequestProperty("Accept", "application/json; charset=UTF-8");
 			uc.setRequestProperty("charset", "utf-8");
 			uc.setUseCaches(false);
-			uc.setReadTimeout(HTTP_TIMEOUT_MS);
+			uc.setReadTimeout(15000);
 			// send the message
 			try (DataOutputStream wr = new DataOutputStream(uc.getOutputStream())) {
 				wr.writeBytes(body);
@@ -592,16 +387,16 @@ public class Checkout extends HttpServlet {
 					reader.close();
 
 					// Cache the auth_json for future use
-					int expires_in = auth_json.get(JSON_EXPIRES_IN).getAsInt();  // seconds from now
-					Long exp = new Date(new Date().getTime() + expires_in*MILLIS_PER_SECOND - TOKEN_CACHE_GRACE_MS).getTime();
-					auth_json.addProperty(JSON_EXP, exp);
-					return auth_json.get(JSON_ACCESS_TOKEN).getAsString();
+					int expires_in = auth_json.get("expires_in").getAsInt();  // seconds from now
+					Long exp = new Date(new Date().getTime() + expires_in*1000 - 5000).getTime();
+					auth_json.addProperty("exp", exp);
+					return auth_json.get("access_token").getAsString();
 				} else {
 					reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));				
 					JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
 					reader.close();
-					Util.sendEmail(EMAIL_FROM, EMAIL_ADMIN, EMAIL_SUBJECT_AUTH, json.toString());
-					throw new Exception(ERROR_PAYPAL_AUTH + json.toString());
+					Util.sendEmail("ChemVantage LLC", "admin@chemvantage.org", "PayPal AuthToken Error", json.toString());
+					throw new Exception("PayPal authentication failed: " + json.toString());
 				}
 			} finally {
 				if (reader != null) reader.close();
@@ -632,33 +427,33 @@ public class Checkout extends HttpServlet {
 	 * @see PayPalOrder
 	 */
 	String createOrder(User user, HttpServletRequest request) throws Exception {	
-		int nMonths = Integer.parseInt(request.getParameter(PARAM_NMONTHS));
-		int value = PRICE_USD * (nMonths - nMonths/DISCOUNT_12_MONTH);
+		int nMonths = Integer.parseInt(request.getParameter("nmonths"));
+		int value = 2 * (nMonths - nMonths/3);
 		
-		String platform_deployment_id = request.getParameter(PARAM_D);
+		String platform_deployment_id = request.getParameter("d");
 		String request_id = UUID.randomUUID().toString();
 		
 		JsonObject order_data = new JsonObject();
-		order_data.addProperty(JSON_INTENT, PAYPAL_INTENT_CAPTURE);
+		order_data.addProperty("intent", "CAPTURE");
 		  JsonArray purchaseUnits = new JsonArray();
 		    JsonObject subscription = new JsonObject();
-		    subscription.addProperty(JSON_DESCRIPTION, nMonths + " - month Chem4AP subscription");
+		    subscription.addProperty("description", nMonths + " - month Chem4AP subscription");
 		      JsonObject amount = new JsonObject();
-		      amount.addProperty(JSON_CURRENCY_CODE, CURRENCY_USD);
-		      amount.addProperty(JSON_VALUE, (PRICE_USD * (nMonths - nMonths/DISCOUNT_12_MONTH)) + CURRENCY_FORMAT);  // calculated discount schedule
-		    subscription.add(JSON_AMOUNT, amount);
+		      amount.addProperty("currency_code", "USD");
+		      amount.addProperty("value", (2 * (nMonths - nMonths/3)) + ".00");  // calculated discount schedule
+		    subscription.add("amount", amount);
 		 purchaseUnits.add(subscription);
-		order_data.add(JSON_PURCHASE_UNITS, purchaseUnits);
+		order_data.add("purchase_units", purchaseUnits);
 		  JsonObject paymentSource = JsonParser.parseString("{'paypal':{'experience_context':{'shipping_preference':'NO_SHIPPING'}}}").getAsJsonObject();
-		order_data.add(JSON_PAYMENT_SOURCE, paymentSource);
-		String baseUrl = Util.projectId.equals(PROJECT_ID_DEV)?PAYPAL_BASE_URL_SANDBOX:PAYPAL_BASE_URL_PROD;
+		order_data.add("payment_source", paymentSource);
+		String baseUrl = Util.projectId.equals("dev-chem4ap")?"https://api-m.sandbox.paypal.com":"https://api-m.paypal.com";
 		
-		URL u = new URI(baseUrl + PAYPAL_PATH_ORDERS).toURL();
+		URL u = new URI(baseUrl + "/v2/checkout/orders").toURL();
 		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 		uc.setRequestMethod("POST");
-		uc.setRequestProperty("Authorization", AUTH_BEARER_PREFIX + generateAccessToken());
-		uc.setRequestProperty(HEADER_PAYPAL_REQUEST_ID, request_id);
-		uc.setRequestProperty("Content-Type", CONTENT_TYPE_JSON);
+		uc.setRequestProperty("Authorization", "Bearer " + generateAccessToken());
+		uc.setRequestProperty("PayPal-Request-Id", request_id);
+		uc.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 		uc.setDoOutput(true);
 		
 		try (OutputStreamWriter writer = new OutputStreamWriter(uc.getOutputStream())) {
@@ -670,7 +465,7 @@ public class Checkout extends HttpServlet {
 		try {
 			if (isSuccessResponse(uc)) {
 				reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
-				String order_id = JsonParser.parseReader(reader).getAsJsonObject().get(JSON_ID).getAsString();
+				String order_id = JsonParser.parseReader(reader).getAsJsonObject().get("id").getAsString();
 				reader.close();
 				ofy().save().entity(new PayPalOrder(order_id, new Date(), order_data.toString(), nMonths, value, user, platform_deployment_id, request_id));
 				return order_id;
@@ -678,8 +473,8 @@ public class Checkout extends HttpServlet {
 				reader = new BufferedReader(new InputStreamReader(uc.getErrorStream()));				
 				JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
 				reader.close();
-				Util.sendEmail(EMAIL_FROM, EMAIL_ADMIN, EMAIL_SUBJECT_ORDER, json.toString());
-				throw new Exception(ERROR_ORDER_CREATION + json.toString());
+				Util.sendEmail("ChemVantage LLC", "admin@chemvantage.org", "PayPal OrderId Error", json.toString());
+				throw new Exception("Failed to create PayPal order: " + json.toString());
 			}
 		} finally {
 			if (reader != null) reader.close();
@@ -704,30 +499,31 @@ public class Checkout extends HttpServlet {
 	 * @see PremiumUser
 	 */
 	JsonObject completeOrder(User user, HttpServletRequest request) throws Exception {
-		String order_id = request.getParameter(PARAM_ORDER_ID);
+		String order_id = request.getParameter("order_id");
 		PayPalOrder order = ofy().load().type(PayPalOrder.class).id(order_id).safe();
 		String organization = "Chem4AP";
 		try {
 			Deployment deployment = ofy().load().type(Deployment.class).id(order.platform_deployment_id).safe();
 			organization = deployment.organization;
 		} catch (Exception e) {}
-		String baseUrl = Util.projectId.equals(PROJECT_ID_DEV)?PAYPAL_BASE_URL_SANDBOX:PAYPAL_BASE_URL_PROD;
+		String baseUrl = Util.projectId.equals("dev-chem4ap")?"https://api-m.sandbox.paypal.com":"https://api-m.paypal.com";
 		
-		URL u = new URI(baseUrl + PAYPAL_PATH_ORDERS + "/" + order_id + PAYPAL_PATH_CAPTURE).toURL();
+		URL u = new URI(baseUrl + "/v2/checkout/orders" + "/" + order_id + "/capture").toURL();
 		HttpURLConnection uc = (HttpURLConnection) u.openConnection();
 		uc.setRequestMethod("POST");
-		uc.setRequestProperty("Authorization", AUTH_BEARER_PREFIX + generateAccessToken());
-		uc.setRequestProperty(HEADER_PAYPAL_REQUEST_ID, order.request_id);
-		uc.setRequestProperty("Content-Type", CONTENT_TYPE_JSON);
+		uc.setRequestProperty("Authorization", "Bearer " + generateAccessToken());
+		uc.setRequestProperty("PayPal-Request-Id", order.request_id);
+		uc.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
 		
 		BufferedReader reader = new BufferedReader(new InputStreamReader(uc.getInputStream()));				
 		JsonObject resp = JsonParser.parseReader(reader).getAsJsonObject();
 		reader.close();
 		
-		order.status = resp.get(JSON_STATUS).getAsString();  // update order status
-		if (order.status.equals(PAYPAL_STATUS_COMPLETED)) {  // create new PremiumUser
+		order.status = resp.get("status").getAsString();  // update order status
+		if (order.status.equals("COMPLETED")) {  // create new PremiumUser
 			PremiumUser pu = new PremiumUser(user.getHashedId(), order.nMonths, order.value, organization, order.id);
-			resp.addProperty(JSON_EXPIRES, pu.exp.toString());
+			resp.addProperty("expires", pu.exp.toString());
+			resp.addProperty("token", Util.getToken(user.getTokenSignature()));
 		}
 		ofy().save().entity(order);
 		
