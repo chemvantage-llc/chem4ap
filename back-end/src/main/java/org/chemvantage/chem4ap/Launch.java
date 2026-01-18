@@ -128,39 +128,6 @@ public class Launch extends HttpServlet {
 	// Token Management Constants
 	private static final long LAUNCH_TOKEN_VALIDITY_MS = 604800000L;  // 7 days in milliseconds
 	
-	// Email Validation Constants
-	private static final String EMAIL_REGEX = "^[A-Za-z0-9+_.-]+@(.+)$";  // RFC 5322 simplified pattern
-	
-	// Assignment and Curriculum Constants
-	private static final String ASSIGNMENTS_TYPE = "Exercises";  // Type identifier for exercise assignments
-	
-	// HTML and Display Constants
-	private static final String FREE_TRIAL_MESSAGE = 
-		"Your free trial account includes access to Unit 0 - Prepare for AP Chemistry. " +
-		"This will give you a feel for how to use the app by progressing through the different types of questions. " +
-		"If you start Units 1-9 you will be asked to purchase a subscription.";
-	private static final String TOKEN_EXPIRED_WITH_INVALID_EMAIL = "<h1>Token Expired with Invalid Email</h1>Unable to resend login link.";
-	private static final String UNAUTHORIZED_MESSAGE = "<h1>Unauthorized</h1>";
-	private static final String UNIT_NOT_FOUND_MESSAGE = "<h1>Error: Unit not found</h1>";
-	private static final String INVALID_UNIT_ID_MESSAGE = "<h1>Error: Invalid UnitId format</h1>";
-	private static final String MISSING_EMAIL_MESSAGE = "<h1>Your email address was missing or not formatted correctly.</h1>";
-	private static final String EMAIL_CHECK_MESSAGE = 
-		"<h1>Please Check Your Email</h1>" +
-		"We just sent a personalized secure link to you at {email}. <br/>" +
-		"This is just for you; please do not share the link with anyone else.<br/>" +
-		"Click the link in your email to launch your session in Chem4AP.<br/>" +
-		"If the link doesn't work, or you encounter difficulties launching the app, " +
-		"please contact us at <a href='mailto:admin@chemvantage.org'>admin@chemvantage.org</a>.";
-	
-	// UI Element Names and Selectors
-	private static final String UNIT_ID_PARAM = "UnitId";
-	private static final String EMAIL_PARAM = "Email";
-	private static final String SIG_PARAM = "sig";
-	private static final String TOKEN_PARAM = "t";
-	private static final String TOPIC_CLASS_PREFIX = "list";
-	private static final String START_BUTTON_CLASS = "startButton";
-	private static final String TOPIC_LIST_CLASS = "topic";
-	
 	
 	/**
 	 * Handles GET requests for JWT token validation and unit selection.
@@ -257,7 +224,7 @@ public class Launch extends HttpServlet {
 		PrintWriter out = response.getWriter();
 		
 		try {
-			String sig = request.getParameter(SIG_PARAM);
+			String sig = request.getParameter("sig");
 			if (sig != null && !sig.isEmpty()) {
 				User user = User.getUser(sig);
 				if (user != null) {
@@ -266,7 +233,7 @@ public class Launch extends HttpServlet {
 				}
 			}
 			
-			String token = request.getParameter(TOKEN_PARAM);
+			String token = request.getParameter("t");
 			if (token == null || token.isEmpty()) {
 				response.sendRedirect(Util.getServerUrl());
 				return;
@@ -288,7 +255,7 @@ public class Launch extends HttpServlet {
 				buf.append(unitSelectForm(user));
 			} catch (TokenExpiredException e1) {
 				if (email == null || email.isEmpty()) {
-					buf.append(TOKEN_EXPIRED_WITH_INVALID_EMAIL);
+					buf.append("<h1>Token Expired with Invalid Email</h1>Unable to resend login link.");
 				} else {
 					buf.append(resendExpiredTokenEmail(email, algorithm));
 				}
@@ -422,15 +389,15 @@ public class Launch extends HttpServlet {
 		StringBuilder buf = new StringBuilder(Util.head("Chem4AP Login")).append(Util.banner);
 
 		// Try to process as unit selection request first
-		String sigParam = request.getParameter(SIG_PARAM);
-		String unitIdParam = request.getParameter(UNIT_ID_PARAM);
+		String sigParam = request.getParameter("sig");
+		String unitIdParam = request.getParameter("UnitId");
 		
 		if (sigParam != null && !sigParam.isEmpty() && unitIdParam != null && !unitIdParam.isEmpty()) {
 			try {
 				Long unitId = Long.parseLong(unitIdParam);
 				User user = User.getUser(sigParam);
 				if (user == null) {
-					buf.append(UNAUTHORIZED_MESSAGE);
+					buf.append("<h1>Unauthorized</h1>");
 					out.println(buf.toString() + Util.foot());
 					return;
 				}
@@ -442,14 +409,14 @@ public class Launch extends HttpServlet {
 					.now();
 				if (a == null) {
 					// Create new Assignment entity
-					a = new Assignment(ASSIGNMENTS_TYPE, "", unitId, Util.getServerUrl());
+					a = new Assignment("Exercises", "", unitId, Util.getServerUrl());
 					ofy().save().entity(a).now();
 				}
 				
 				user.setAssignment(a.id);
 				APChemUnit u = ofy().load().type(APChemUnit.class).id(unitId).safe();
 				if (u == null) {
-					buf.append(UNIT_NOT_FOUND_MESSAGE);
+					buf.append("<h1>Error: Unit not found</h1>");
 					out.println(buf.toString() + Util.foot());
 					return;
 				}
@@ -461,7 +428,7 @@ public class Launch extends HttpServlet {
 				}
 				return;
 			} catch (NumberFormatException e) {
-				buf.append(INVALID_UNIT_ID_MESSAGE);
+				buf.append("<h1>Error: Invalid UnitId format</h1>");
 				out.println(buf.toString() + Util.foot());
 				return;
 			} catch (Exception e) {
@@ -473,17 +440,17 @@ public class Launch extends HttpServlet {
 		
 		// Process as email-based login request
 		try {
-			String email = request.getParameter(EMAIL_PARAM);
+			String email = request.getParameter("Email");
 			if (email == null || email.isEmpty()) {
-				buf.append(MISSING_EMAIL_MESSAGE);
+				buf.append("<h1>Your email address was missing or not formatted correctly.</h1>");
 				out.println(buf.toString() + Util.foot());
 				return;
 			}
 
 			// Validate email address structure
-			Pattern pattern = Pattern.compile(EMAIL_REGEX);
+			Pattern pattern = Pattern.compile("^[A-Za-z0-9+_.-]+@(.+)$");
 			if (!pattern.matcher(email).matches()) {
-				buf.append(MISSING_EMAIL_MESSAGE);
+				buf.append("<h1>Your email address was missing or not formatted correctly.</h1>");
 				out.println(buf.toString() + Util.foot());
 				return;
 			}
@@ -500,7 +467,13 @@ public class Launch extends HttpServlet {
 			String emailMessage = buildLoginEmailMessage(token, exp);
 			Util.sendEmail(null, email, "Chem4AP Login Link", emailMessage);
 
-			buf.append(EMAIL_CHECK_MESSAGE.replace("{email}", escapeHtml(email)));
+			buf.append("<h1>Please Check Your Email</h1>" +
+				"We just sent a personalized secure link to you at {email}. <br/>" +
+				"This is just for you; please do not share the link with anyone else.<br/>" +
+				"Click the link in your email to launch your session in Chem4AP.<br/>" +
+				"If the link doesn't work, or you encounter difficulties launching the app, " +
+				"please contact us at <a href='mailto:admin@chemvantage.org'>admin@chemvantage.org</a>."
+				.replace("{email}", escapeHtml(email)));
 		} catch (Exception e) {
 			buf.append("<h1>Error</h1>" + escapeHtml(e.getMessage()));
 		}
@@ -635,7 +608,11 @@ public class Launch extends HttpServlet {
 		StringBuilder buf = new StringBuilder("<h1>Select a Unit</h1>");
 		
 		if (!user.isPremium()) {
-			buf.append("<div style='max-width:600px'>").append(FREE_TRIAL_MESSAGE).append("</div><br/><br/>");
+			buf.append("<div style='max-width:600px'>")
+				.append("Your free trial account includes access to Unit 0 - Prepare for AP Chemistry. " +
+					"This will give you a feel for how to use the app by progressing through the different types of questions. " +
+					"If you start Units 1-9 you will be asked to purchase a subscription.")
+				.append("</div><br/><br/>");
 		}
 		
 		List<APChemUnit> units = ofy().load().type(APChemUnit.class).order("unitNumber").list();
@@ -646,7 +623,7 @@ public class Launch extends HttpServlet {
 		
 		// Create a Map of Chem4AP assignments by UnitID
 		List<Assignment> assignmentList = ofy().load().type(Assignment.class)
-			.filter("assignmentType", ASSIGNMENTS_TYPE)
+			.filter("assignmentType", "Exercises")
 			.filter("platform_deployment_id", Util.getServerUrl())
 			.list();
 		Map<Long,Assignment> assignmentMap = new HashMap<Long,Assignment>();
@@ -679,13 +656,13 @@ public class Launch extends HttpServlet {
 			}
 			
 			buf.append("<li><label>")
-				.append("<input type=radio name=").append(UNIT_ID_PARAM).append(" value=").append(u.id).append(" onclick=unitClicked('").append(u.id).append("') />")
+				.append("<input type=radio name=").append("UnitId").append(" value=").append(u.id).append(" onclick=unitClicked('").append(u.id).append("') />")
 				.append("<b> Unit ").append(u.unitNumber).append(" - ").append(escapeHtml(u.title));
 			if (userPctScore > 0) {
 				buf.append(" (").append(userPctScore).append("%)");
 			}
 			buf.append("</b></label>&nbsp;")
-				.append("<input id=start").append(u.id).append(" class='").append(START_BUTTON_CLASS).append("' style='display:none' type=submit value='")
+				.append("<input id=start").append(u.id).append(" class='").append("startButton").append("' style='display:none' type=submit value='")
 				.append(userPctScore == 0 ? "Start" : "Resume").append("' />")
 				.append("</li>");
 			
@@ -694,7 +671,7 @@ public class Launch extends HttpServlet {
 			if (topics != null) {
 				for(APChemTopic t : topics) {
 					if (t != null) {
-						buf.append("<li class='").append(TOPIC_LIST_CLASS).append(" ").append(TOPIC_CLASS_PREFIX).append(u.id).append("' style='display:none'>")
+						buf.append("<li class='").append("topic").append(" ").append("list").append(u.id).append("' style='display:none'>")
 							.append(escapeHtml(t.title)).append("</li>");
 					}
 				}
@@ -703,7 +680,7 @@ public class Launch extends HttpServlet {
 		}
 		
 		buf.append("</ul>")
-			.append("<input type=hidden name=").append(SIG_PARAM).append(" value=").append(user.getTokenSignature()).append(" />")
+			.append("<input type=hidden name=").append("sig").append(" value=").append(user.getTokenSignature()).append(" />")
 			.append("</form>");
 		
 		// Add JavaScript for topic visibility management
@@ -794,15 +771,15 @@ public class Launch extends HttpServlet {
 	private String buildUnitSelectionScript(List<APChemUnit> units, boolean isPremium) {
 		StringBuilder script = new StringBuilder("<script>")
 			.append("function unitClicked(unitId) {")
-			.append("  var allListItems = document.querySelectorAll('li.").append(TOPIC_LIST_CLASS).append("');")
+			.append("  var allListItems = document.querySelectorAll('li.").append("topic").append("');")
 			.append("  for (var i=0; i<allListItems.length;i++) {")
 			.append("    allListItems[i].style='display:none';")
 			.append("  }")
-			.append("  var unitListItems = document.querySelectorAll('li.").append(TOPIC_CLASS_PREFIX).append("' + unitId);")
+			.append("  var unitListItems = document.querySelectorAll('li.").append("list").append("' + unitId);")
 			.append("  for (var i=0;i<unitListItems.length;i++) {")
 			.append("    unitListItems[i].style='display:list-item';")
 			.append("  }")
-			.append("  var startButtons = document.querySelectorAll('.").append(START_BUTTON_CLASS).append("');")
+			.append("  var startButtons = document.querySelectorAll('.").append("startButton").append("');")
 			.append("  for (var i=0;i<startButtons.length;i++) {")
 			.append("    startButtons[i].style='display:none';")
 			.append("  }")
@@ -812,8 +789,8 @@ public class Launch extends HttpServlet {
 		if (!isPremium && !units.isEmpty() && units.getFirst() != null) {
 			APChemUnit unitZero = units.getFirst();
 			script.append("unitClicked(").append(unitZero.id).append(");")
-				.append("document.querySelector('input[name=\"").append(UNIT_ID_PARAM).append("\"]').checked=true;")
-				.append("var firstInput = document.querySelector('input[name=\"").append(UNIT_ID_PARAM).append("\"]');")
+				.append("document.querySelector('input[name=\"").append("UnitId").append("\"]').checked=true;")
+				.append("var firstInput = document.querySelector('input[name=\"").append("UnitId").append("\"]');")
 				.append("if (firstInput) firstInput.checked=true;");
 		}
 		
