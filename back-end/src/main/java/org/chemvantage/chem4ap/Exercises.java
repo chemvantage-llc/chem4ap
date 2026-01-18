@@ -68,217 +68,6 @@ public class Exercises extends HttpServlet {
 	@Serial
 	private static final long serialVersionUID = 1L;
 	
-	// UserRequest parameter constants for routing
-	/** Request parameter value for instructor dashboard display */
-	private static final String USER_REQUEST_INSTRUCTOR_PAGE = "InstructorPage";
-	/** Request parameter value for topic selection form */
-	private static final String USER_REQUEST_SELECT_TOPICS = "SelectTopics";
-	/** Request parameter value for score review page */
-	private static final String USER_REQUEST_REVIEW_SCORES = "ReviewScores";
-	/** Request parameter value for assigning topics to assignment */
-	private static final String USER_REQUEST_ASSIGN_TOPICS = "AssignTopics";
-	/** Request parameter value for synchronizing scores to LMS */
-	private static final String USER_REQUEST_SYNCHRONIZE_SCORES = "SynchronizeScores";
-	/** Request parameter value for requesting question explanation */
-	
-	// HTTP header and content type constants
-	/** HTTP Authorization header name for Bearer token authentication */
-	private static final String AUTHORIZATION_HEADER = "Authorization";
-	/** Bearer token prefix in Authorization header */
-	private static final String BEARER_PREFIX = "Bearer ";
-	/** HTML content type with UTF-8 encoding */
-	private static final String CONTENT_TYPE_HTML = "text/html; charset=UTF-8";
-	/** JSON content type with UTF-8 encoding */
-	private static final String CONTENT_TYPE_JSON = "application/json; charset=UTF-8";
-	/** Authorization error message for LTI students */
-	private static final String ERROR_UNAUTHORIZED = "Unauthorized. You must launch this app from the link inside your LMS.";
-	/** Request parameter value for requesting question explanation */
-	private static final String USER_REQUEST_EXPLANATION = "Explanation";
-
-	// Request parameter and field names
-	/** Request parameter name for user action/request type */
-	private static final String PARAM_USER_REQUEST = "UserRequest";
-	/** Request parameter name for topic IDs (array) */
-	private static final String PARAM_TOPIC_ID = "TopicId";
-	/** Request parameter name for user session signature */
-	private static final String PARAM_SIG = "sig";
-	/** Request parameter name for question ID */
-	private static final String PARAM_ID = "id";
-	/** Request parameter name for student answer */
-	private static final String PARAM_ANSWER = "answer";
-	/** Request parameter name for parameterized question parameter value */
-	private static final String PARAM_PARAMETER = "parameter";
-
-	// JSON response field names
-	/** JSON field name for authorization token in response */
-	private static final String JSON_TOKEN = "token";
-	/** JSON field name for question object in response */
-	private static final String JSON_QUESTION = "question";
-	/** JSON field name for feedback HTML in response */
-	private static final String JSON_HTML = "html";
-	/** JSON field name for error message */
-	private static final String JSON_ERROR = "error";
-	/** JSON field name for question ID */
-	private static final String JSON_ID = "id";
-	/** JSON field name for question type */
-	private static final String JSON_TYPE = "type";
-	/** JSON field name for question prompt/text */
-	private static final String JSON_PROMPT = "prompt";
-	/** JSON field name for units of measurement */
-	private static final String JSON_UNITS = "units";
-	/** JSON field name for answer choices array */
-	private static final String JSON_CHOICES = "choices";
-	/** JSON field name for scrambled/randomized choices flag */
-	private static final String JSON_SCRAMBLED = "scrambled";
-	/** JSON field name for parameterized question parameter value */
-	private static final String JSON_PARAMETER = "parameter";
-	
-	// Question type for error responses
-	/** Question type for error messages displayed as true/false question */
-	private static final String ERROR_QUESTION_TYPE = "true_false";
-	/** Placeholder question ID for error responses */
-	private static final String ERROR_QUESTION_ID = "1";
-	
-	// HTML and UI constants
-	/** CSS class for unit selection checkbox */
-	private static final String CSS_CLASS_UNIT_CHECKBOX = "unitCheckbox";
-	/** CSS class prefix for topic checkboxes under a unit */
-	private static final String CSS_CLASS_UNIT_PREFIX = "unit";
-	/** CSS class prefix for list items in topic selection */
-	private static final String CSS_CLASS_LIST_PREFIX = "list";
-	/** HTML button class for primary action buttons */
-	private static final String CSS_CLASS_BTN_PRIMARY = "btn btn-primary";
-	/** HTML button class for secondary action buttons */
-	private static final String CSS_CLASS_BTN_SECONDARY = "btn btn-secondary";
-	/** Default display style for visible elements */
-	private static final String CSS_DISPLAY_LIST_ITEM = "display:list-item";
-	/** CSS display style for hidden elements */
-	private static final String CSS_DISPLAY_NONE = "display:none";
-	
-	// Feedback message constants
-	/** Feedback message for correct answers */
-	private static final String FEEDBACK_CORRECT = "<h2>That's right! Your answer is correct.</h2>";
-	/** Feedback message prefix for incorrect answers */
-	private static final String FEEDBACK_INCORRECT_PREFIX = "<h2>Sorry, your answer is not correct ";
-	/** Feedback message for correct answer */
-	private static final String FEEDBACK_CORRECT_ANSWER = "The correct answer is: ";
-	/** URL path for feedback form (incorrect answer report) */
-	private static final String PATH_FEEDBACK = "/feedback";
-	/** URL path for image resources */
-	private static final String PATH_IMAGES = "/images";
-	/** Filename for feedback icon image */
-	private static final String IMAGE_FEEDBACK = "feedback.png";
-	/** Alt text for feedback report button */
-	private static final String IMAGE_ALT_FEEDBACK = "Report a problem";
-	/** Title text for feedback report button */
-	private static final String IMAGE_TITLE_FEEDBACK = "Report a problem";
-	/** Image height in CSS pixels */
-	private static final String IMAGE_HEIGHT = "20px";
-	/** Image vertical alignment in CSS */
-	private static final String IMAGE_VERTICAL_ALIGN = "8px";
-	
-	// Score and completion constants
-	/** Score message prefix */
-	private static final String MESSAGE_SCORE_PREFIX = "<br/>Your score on this assignment is ";
-	/** Score message suffix (percentage) */
-	private static final String MESSAGE_SCORE_SUFFIX = "%";
-	/** Perfect score value for completion */
-	private static final int PERFECT_SCORE = 100;
-	/** URL path for assignment completion/finishing */
-	private static final String PATH_LAUNCH = "/launch";
-	/** Finish button text */
-	private static final String BUTTON_FINISH = "Finish";
-	
-	// HTML form and table constants
-	/** HTML form method attribute for POST requests */
-	private static final String FORM_METHOD_POST = "post";
-	/** HTML input type for hidden fields */
-	private static final String INPUT_TYPE_HIDDEN = "hidden";
-	/** HTML input type for checkbox */
-	private static final String INPUT_TYPE_CHECKBOX = "checkbox";
-	/** HTML input type for submit button */
-	private static final String INPUT_TYPE_SUBMIT = "submit";
-	/** HTML table header row tag open */
-	private static final String TABLE_HEADER_OPEN = "<table><tr><th>&nbsp;</th><th>Name</th><th>Email</th><th>Role</th><th>LMS Score</th><th>CV Score</th></tr>";
-	/** HTML table align attribute for center alignment */
-	private static final String TABLE_ALIGN_CENTER = "align=center";
-	
-	// LTI and score synchronization constants
-	/** Learner role in LTI roster (student) */
-	private static final String LTI_ROLE_LEARNER = "Learner";
-	/** HTTP encoding for URL parameters */
-	private static final String URL_ENCODING = "UTF-8";
-	/** Path for background task creation (score reporting) */
-	private static final String PATH_REPORT = "/report";
-	/** Task parameter name for assignment ID */
-	private static final String TASK_PARAM_ASSIGNMENT_ID = "AssignmentId=";
-	/** Task parameter name for user ID */
-	private static final String TASK_PARAM_USER_ID = "&UserId=";
-	/** Default score display when not available */
-	private static final String SCORE_NOT_AVAILABLE = " - ";
-	/** Score format suffix (percentage) */
-	private static final String SCORE_FORMAT_PERCENT = "%";
-	
-	// JavaScript and interactive elements constants
-	/** JavaScript function name for topic checkbox click handler */
-	private static final String JS_FUNC_TOPIC_CLICKED = "topicClicked";
-	/** JavaScript function name for unit checkbox click handler */
-	private static final String JS_FUNC_UNIT_CLICKED = "unitClicked";
-	/** HTML onclick attribute value for synchronize button (hide on click) */
-	private static final String ONCLICK_SYNC_HIDE = "document.getElementById('syncsubmit').style='display:none';";
-	
-	// Button and link text constants
-	/** Button text for assigning selected topics */
-	private static final String BTN_ASSIGN_TOPICS = "Click here to assign the topics selected below.";
-	/** Button text for synchronizing scores */
-	private static final String BTN_SYNCHRONIZE = "Synchronize Scores";
-	/** Button text for quit/return */
-	private static final String BTN_QUIT = "Quit";
-	/** Link text for reviewing scores */
-	private static final String LINK_REVIEW_SCORES = "Review your students' scores on this assignment";
-	/** Link text for selecting topics */
-	private static final String LINK_SELECT_TOPICS = "add or delete topics";
-	/** Link text for viewing assignment */
-	private static final String LINK_VIEW_ASSIGNMENT = "View This Assignment";
-	/** Link text for returning to instructor page */
-	private static final String LINK_RETURN_TO_INSTRUCTOR = "Return to the instructor page";
-	
-	// Page title and heading constants
-	/** Page title for instructor page */
-	private static final String TITLE_INSTRUCTOR_PAGE = "Instructor Page";
-	/** Page title for topic selection */
-	private static final String TITLE_SELECT_TOPICS = "Select Topics";
-	/** Page title for score review */
-	private static final String TITLE_REVIEW_SCORES = "Review Scores";
-	/** Page heading for scores */
-	private static final String HEADING_SCORES = "<h1>Scores for This Assignment</h1>";
-	/** Page heading for exercises on instructor page */
-	private static final String HEADING_EXERCISES = "<h1>Exercises - Instructor Page</h1>";
-	/** Page heading for topic selection */
-	private static final String HEADING_SELECT_TOPICS = "<h1>Select Topics for This Assignment</h1>";
-	
-	// Assignment description and help text
-	/** Description of formative assignment feature */
-	private static final String DESC_FORMATIVE = "<li>Formative - students may work as many problems as necessary to achieve a score of 100%. The correct answer is provided after each submission, allowing students to learn as they work.</li>";
-	/** Description of adaptive assignment feature */
-	private static final String DESC_ADAPTIVE = "<li>Adaptive - the assignment provides a personalized learning experience by tailoring the questions to each student's needs based on their prior responses.</li>";
-	/** Description of assignment purpose */
-	private static final String DESC_ASSIGNMENT = "This is a formative, adaptive assignment that will help your students prepare for the AP Chemistry Exam. It is a series of questions and numeric problems drawn from the topics below that gradually increase in difficulty.";
-	/** Help text for Names and Roles Provisioning Service */
-	private static final String HELP_NRPS = "The roster below is obtained using the Names and Role Provisioning service offered by your learning management system, and may or may not include user's names or emails, depending on the settings of your LMS.";
-	/** Help text for score synchronization */
-	private static final String HELP_SYNC_SCORES = "If any of the Learner scores above are not synchronized, you may use the button below to launch a background task where ChemVantage will resubmit them to your LMS. This can take several seconds to minutes depending on the number of scores to process. Please note that you may have to adjust the settings in your LMS to accept the revised scores. For example, in Canvas you may need to change the assignment settings to Unlimited Submissions. This may also cause the submission to be counted as late if the LMS assignment deadline has passed.";
-	
-	// External URLs
-	/** URL for AP Chemistry course information */
-	private static final String URL_AP_CHEMISTRY = "https://apcentral.collegeboard.org/courses/ap-chemistry";
-	
-	// Numeric constants
-	/** Maximum iterations for checking all list items in JavaScript */
-	private static final String JS_INDEX_VAR = "i";
-	/** Maximum iterations for checking all checkboxes in JavaScript */
-	private static final String JS_INNER_INDEX_VAR = "j";
-	
 	/**
 	 * Handles HTTP GET requests for exercises.
 	 * 
@@ -302,25 +91,25 @@ public class Exercises extends HttpServlet {
 		JsonObject responseJson = new JsonObject();
 		
 		try {
-			String userRequest = request.getParameter(PARAM_USER_REQUEST);
+			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) {
 				userRequest = "";
 			}
 			
 			switch (userRequest) {
-			case USER_REQUEST_INSTRUCTOR_PAGE:
-				response.setContentType(CONTENT_TYPE_HTML);
+			case "InstructorPage":
+				response.setContentType("text/html; charset=UTF-8");
 				out.println(instructorPage(request));
 				break;
-			case USER_REQUEST_SELECT_TOPICS:
-				response.setContentType(CONTENT_TYPE_HTML);
+			case "SelectTopics":
+				response.setContentType("text/html; charset=UTF-8");
 				out.println(viewTopicSelectForm(request));
 				break;
-			case USER_REQUEST_REVIEW_SCORES:
-				response.setContentType(CONTENT_TYPE_HTML);
+			case "ReviewScores":
+				response.setContentType("text/html; charset=UTF-8");
 				out.println(reviewScores(request));
 				break;
-			case USER_REQUEST_EXPLANATION:
+			case "Explanation":
 				long questionId = Long.parseLong(request.getParameter("qid"));
 				String pParam = request.getParameter("p");
 				long parameter = (pParam != null) ? Long.parseLong(pParam) : 0;
@@ -333,30 +122,30 @@ public class Exercises extends HttpServlet {
 				}
 				break;
 			default:
-				response.setContentType(CONTENT_TYPE_JSON);
-				String authHeader = request.getHeader(AUTHORIZATION_HEADER);
-				if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
-					throw new Exception(ERROR_UNAUTHORIZED);
+				response.setContentType("application/json; charset=UTF-8");
+				String authHeader = request.getHeader("Authorization");
+				if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+					throw new Exception("Unauthorized. You must launch this app from the link inside your LMS.");
 				}
-				String token = authHeader.substring(BEARER_PREFIX.length());
+				String token = authHeader.substring("Bearer ".length());
 				String sig = Util.isValid(token);
-				responseJson.addProperty(JSON_TOKEN, Util.getToken(sig));
+				responseJson.addProperty("token", Util.getToken(sig));
 
 				User user = User.getUser(sig);
 				JsonObject q = getCurrentQuestion(user);
 				if (q == null) throw new Exception("Unable to get a new question.");
-				responseJson.add(JSON_QUESTION, q);
+				responseJson.add("question", q);
 				out.println(responseJson.toString());
 			}
 		} catch (Exception e) {
-			if (!response.getContentType().startsWith(CONTENT_TYPE_JSON.substring(0, 16))) {
-				response.setContentType(CONTENT_TYPE_JSON);
+			if (!response.getContentType().startsWith("application/json")) {
+				response.setContentType("application/json; charset=UTF-8");
 			}
 			JsonObject question = new JsonObject();
-			question.addProperty(JSON_TYPE, ERROR_QUESTION_TYPE);
-			question.addProperty(JSON_ID, ERROR_QUESTION_ID);
-			question.addProperty(JSON_PROMPT, e.getMessage());
-			responseJson.add(JSON_QUESTION, question);
+			question.addProperty("type", "true_false");
+			question.addProperty("id", "1");
+			question.addProperty("prompt", e.getMessage());
+			responseJson.add("question", question);
 			out.println(responseJson.toString());
 		}
 	}
@@ -377,21 +166,21 @@ public class Exercises extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) 
 			throws ServletException, IOException {
-		response.setContentType(CONTENT_TYPE_JSON);
+		response.setContentType("application/json; charset=UTF-8");
 		PrintWriter out = response.getWriter();
 		try {
-			String userRequest = request.getParameter(PARAM_USER_REQUEST);
+			String userRequest = request.getParameter("UserRequest");
 			if (userRequest == null) {
 				userRequest = "";
 			}
 			
 			switch (userRequest) {
-			case USER_REQUEST_ASSIGN_TOPICS:
-				response.setContentType(CONTENT_TYPE_HTML);
+			case "AssignTopics":
+				response.setContentType("text/html; charset=UTF-8");
 				out.println(assignTopics(request));
 				break;
-			case USER_REQUEST_SYNCHRONIZE_SCORES:
-				response.setContentType(CONTENT_TYPE_HTML);
+			case "SynchronizeScores":
+				response.setContentType("text/html; charset=UTF-8");
 				out.println(synchronizeScores(request));
 				break;
 			default:
@@ -399,7 +188,7 @@ public class Exercises extends HttpServlet {
 			}
 		} catch (Exception e) {
 			JsonObject err = new JsonObject();
-			err.addProperty(JSON_ERROR, e.getMessage());
+			err.addProperty("error", e.getMessage());
 			out.println(err);
 		}
 	}
@@ -415,7 +204,7 @@ public class Exercises extends HttpServlet {
 	 * @throws Exception if user is not instructor, sig is missing, or assignment cannot be loaded
 	 */
 	String assignTopics(HttpServletRequest request) throws Exception {
-		String sig = request.getParameter(PARAM_SIG);
+		String sig = request.getParameter("sig");
 		if (sig == null || sig.isEmpty()) {
 			throw new IllegalArgumentException("Missing required parameter: sig");
 		}
@@ -427,7 +216,7 @@ public class Exercises extends HttpServlet {
 		if (a == null) {
 			throw new Exception("Assignment not found");
 		}
-		String[] topicIds = request.getParameterValues(PARAM_TOPIC_ID);
+		String[] topicIds = request.getParameterValues("TopicId");
 		if (topicIds != null) {
 			a.topicIds = new ArrayList<Long>();
 			for (String tId : topicIds) {
@@ -471,19 +260,19 @@ public class Exercises extends HttpServlet {
 		if (q.requiresParser()) {
 			Integer parameter = new Random().nextInt();
 			q.setParameters(parameter);
-			j.addProperty(JSON_PARAMETER, parameter);
+			j.addProperty("parameter", parameter);
 			prompt = q.parseString(q.prompt);
 		}
-		j.addProperty(JSON_ID, q.id);
-		j.addProperty(JSON_TYPE, q.type);
-		j.addProperty(JSON_PROMPT, prompt);
+		j.addProperty("id", q.id);
+		j.addProperty("type", q.type);
+		j.addProperty("prompt", prompt);
 	
-		if (q.units != null) j.addProperty(JSON_UNITS, q.units);
+		if (q.units != null) j.addProperty("units", q.units);
 		if (q.choices != null) {
-			j.addProperty(JSON_SCRAMBLED, q.scrambleChoices);
+			j.addProperty("scrambled", q.scrambleChoices);
 			JsonArray choices = new JsonArray();
 			for (String c : q.choices) choices.add(c);
-			j.add(JSON_CHOICES, choices);
+			j.add("choices", choices);
 		}
 		return j;
 	}
@@ -507,11 +296,11 @@ public class Exercises extends HttpServlet {
 	 * @throws Exception if authorization fails, required fields are missing, or question cannot be loaded
 	 */
 	JsonObject getResponseJson(HttpServletRequest request) throws Exception {
-		String authHeader = request.getHeader(AUTHORIZATION_HEADER);
-		if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
-			throw new Exception(ERROR_UNAUTHORIZED);
+		String authHeader = request.getHeader("Authorization");
+		if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+			throw new Exception("Unauthorized. You must launch this app from the link inside your LMS.");
 		}
-		String token = authHeader.substring(BEARER_PREFIX.length());
+		String token = authHeader.substring("Bearer ".length());
 		String sig = Util.isValid(token);
 		
 		JsonObject requestJson = null;
@@ -519,15 +308,15 @@ public class Exercises extends HttpServlet {
 			requestJson = JsonParser.parseReader(reader).getAsJsonObject();
 		}
 		
-		if (!requestJson.has(PARAM_ID) || requestJson.get(PARAM_ID).isJsonNull()) {
+		if (!requestJson.has("id") || requestJson.get("id").isJsonNull()) {
 			throw new IllegalArgumentException("Missing required field: id");
 		}
-		if (!requestJson.has(PARAM_ANSWER) || requestJson.get(PARAM_ANSWER).isJsonNull()) {
+		if (!requestJson.has("answer") || requestJson.get("answer").isJsonNull()) {
 			throw new IllegalArgumentException("Missing required field: answer");
 		}
 		
-		Long questionId = requestJson.get(PARAM_ID).getAsLong();
-		String studentAnswer = requestJson.get(PARAM_ANSWER).getAsString().trim();
+		Long questionId = requestJson.get("id").getAsLong();
+		String studentAnswer = requestJson.get("answer").getAsString().trim();
 		
 		Question q = ofy().load().type(Question.class).id(questionId).safe();
 		if (q == null) {
@@ -535,10 +324,10 @@ public class Exercises extends HttpServlet {
 		}
 		Integer parameter = null;
 		if (q.requiresParser()) {
-			if (!requestJson.has(PARAM_PARAMETER) || requestJson.get(PARAM_PARAMETER).isJsonNull()) {
+			if (!requestJson.has("parameter") || requestJson.get("parameter").isJsonNull()) {
 				throw new IllegalArgumentException("Missing required field: parameter");
 			}
-			parameter = requestJson.get(PARAM_PARAMETER).getAsInt();
+			parameter = requestJson.get("parameter").getAsInt();
 			q.setParameters(parameter);
 		}
 		
@@ -553,8 +342,8 @@ public class Exercises extends HttpServlet {
 		String feedbackHtml = buildFeedback(correct, user, q, questionId, parameter, studentAnswer);
 		
 		JsonObject responseJson = new JsonObject();
-		responseJson.addProperty(JSON_TOKEN, Util.getToken(sig));
-		responseJson.addProperty(JSON_HTML, feedbackHtml);
+		responseJson.addProperty("token", Util.getToken(sig));
+		responseJson.addProperty("html", feedbackHtml);
 		return responseJson;
 	}
 	
@@ -582,29 +371,26 @@ public class Exercises extends HttpServlet {
 		StringBuilder buf = new StringBuilder();
 		
 		if (correct) {
-			buf.append(FEEDBACK_CORRECT);
+			buf.append("<h2>That's right! Your answer is correct.</h2>");
 		} else {
-			buf.append(FEEDBACK_INCORRECT_PREFIX);
-			buf.append("<a href=").append(PATH_FEEDBACK).append("?sig=").append(user.getTokenSignature())
-			   .append("&questionId=").append(questionId);
+			String feedbackUrl = "/feedback?sig=" + user.getTokenSignature() + "&questionId=" + questionId;
 			if (parameter != null) {
-				buf.append("&parameter=").append(parameter);
+				feedbackUrl += "&parameter=" + parameter;
 			}
-			buf.append("&studentAnswer=").append(URLEncoder.encode(studentAnswer, URL_ENCODING))
-			   .append(" style='display: inline;' target=_blank>")
-			   .append("<img src=").append(PATH_IMAGES).append("/").append(IMAGE_FEEDBACK)
-			   .append(" style='height:").append(IMAGE_HEIGHT).append(";vertical-align:").append(IMAGE_VERTICAL_ALIGN).append(";' alt='").append(IMAGE_ALT_FEEDBACK)
-			   .append("' title='").append(IMAGE_TITLE_FEEDBACK).append("' /></a></h2>")
-			   .append(FEEDBACK_CORRECT_ANSWER).append(q.getCorrectAnswer())
-			   .append("<div id='explanation'>")
-			   .append("<button id='explainBtn' class='").append(CSS_CLASS_BTN_SECONDARY).append("' onclick='window.fetchExplanation(").append(questionId).append(", ").append(parameter).append(")'>Explain This</button>")
-			   .append("</div>");
+			feedbackUrl += "&studentAnswer=" + URLEncoder.encode(studentAnswer, "UTF-8");
+			
+			buf.append("<h2>Sorry, your answer is not correct " +
+			   "<a href=" + feedbackUrl + " style='display: inline;' target=_blank>" +
+			   "<img src=/images/feedback.png style='height:20px;vertical-align:8px;' alt='Report a problem' title='Report a problem' /></a></h2>" +
+			   "The correct answer is: " + q.getCorrectAnswer() +
+			   "<div id='explanation'>" +
+			   "<button id='explainBtn' class='btn btn-secondary' onclick='window.fetchExplanation(" + questionId + ", " + parameter + ")'>Explain This</button>" +
+			   "</div>");
 		}
 		
-		buf.append(MESSAGE_SCORE_PREFIX).append(s.totalScore).append(MESSAGE_SCORE_SUFFIX);
-		if (s.totalScore == PERFECT_SCORE && user.platformId.equals(Util.getServerUrl())) {
-			buf.append("&nbsp;<a href='").append(PATH_LAUNCH).append("?sig=").append(user.getTokenSignature())
-			   .append("'><button class='").append(CSS_CLASS_BTN_PRIMARY).append("'>").append(BUTTON_FINISH).append("</button></a>");
+		buf.append("<br/>Your score on this assignment is " + s.totalScore + "%");
+		if (s.totalScore == 100 && user.platformId.equals(Util.getServerUrl())) {
+			buf.append("&nbsp;<a href='/launch?sig=" + user.getTokenSignature() + "'><button class='btn btn-primary'>Finish</button></a>");
 		}
 		
 		return buf.toString();
@@ -681,7 +467,7 @@ public class Exercises extends HttpServlet {
 	 * @throws Exception if user is not instructor, sig is missing, or assignment not found
 	 */
 	String instructorPage(HttpServletRequest request) throws Exception {
-		String sig = request.getParameter(PARAM_SIG);
+		String sig = request.getParameter("sig");
 		if (sig == null || sig.isEmpty()) {
 			throw new IllegalArgumentException("Missing required parameter: sig");
 		}
@@ -722,21 +508,20 @@ public class Exercises extends HttpServlet {
 			throw new Exception("Unauthorized: Only instructors can access this page");
 		}
 		
-		StringBuilder buf = new StringBuilder(Util.head(TITLE_INSTRUCTOR_PAGE));
+		StringBuilder buf = new StringBuilder(Util.head("Instructor Page"));
 		
-		buf.append(Util.banner).append(HEADING_EXERCISES)
-		   .append(DESC_ASSIGNMENT)
-		   .append("<ul>")
-		   .append(DESC_FORMATIVE)
-		   .append(DESC_ADAPTIVE)
-		   .append("</ul>")
-		   .append("<a href=/exercises?UserRequest=").append(USER_REQUEST_REVIEW_SCORES).append("&sig=").append(user.getTokenSignature())
-		   .append(">").append(LINK_REVIEW_SCORES).append("</a><p>");
+		buf.append(Util.banner + "<h1>Exercises - Instructor Page</h1>" +
+		   "<h2>Assignment Type</h2><p>This is an <strong>Assignment</strong> for your students. You select the topics covered and the students can click the topics on their copy to indicate comprehension.</p>" +
+		   "<ul>" +
+		   "<li><strong>Formative Assessment:</strong> Students receive immediate feedback on their answers and can revise, in a safe learning environment.</li>" +
+		   "<li><strong>Adaptive:</strong> Students receive questions in a personalized sequence based on their mastery level.</li>" +
+		   "</ul>" +
+		   "<a href=/exercises?UserRequest=ReviewScores&sig=" + user.getTokenSignature() + ">View Student Scores</a><p>");
 
-		buf.append("<h2>Topics Covered</h2>")
-		   .append("This assignment covers the following ")
-		   .append("<a href=").append(URL_AP_CHEMISTRY).append(" target=_blank>")
-		   .append("AP Chemistry</a> topics:");
+		buf.append("<h2>Topics Covered</h2>" +
+		   "This assignment covers the following " +
+		   "<a href=https://apcentral.collegeboard.org/courses/ap-chemistry target=_blank>" +
+		   "AP Chemistry</a> topics:");
 		
 		Map<Long, APChemTopic> topics = ofy().load().type(APChemTopic.class).ids(a.topicIds);
 		buf.append("<ul>");
@@ -746,13 +531,13 @@ public class Exercises extends HttpServlet {
 				buf.append("<li>").append(topic.title).append("</li>");
 			}
 		}
-		buf.append("</ul>")
-		   .append("You may ")
-		   .append("<a href=/exercises?UserRequest=").append(USER_REQUEST_SELECT_TOPICS).append("&sig=").append(user.getTokenSignature()).append(">")
-		   .append(LINK_SELECT_TOPICS).append("</a> to suit the current needs of your class.<br/><br/>");
+		buf.append("</ul>" +
+		   "You may " +
+		   "<a href=/exercises?UserRequest=SelectTopics&sig=" + user.getTokenSignature() + ">" +
+		   "select topics</a> to suit the current needs of your class.<br/><br/>");
 		
-		buf.append("<a class='").append(CSS_CLASS_BTN_PRIMARY).append("' href='/exercises/index.html?t=").append(Util.getToken(user.getTokenSignature())).append("'>")
-		   .append(LINK_VIEW_ASSIGNMENT).append("</a><p>");
+		buf.append("<a class='btn btn-primary' href='/exercises/index.html?t=" + Util.getToken(user.getTokenSignature()) + "'>" +
+		   "View Assignment</a><p>");
 		
 		return buf.toString() + Util.foot();
 	}
@@ -771,7 +556,7 @@ public class Exercises extends HttpServlet {
 	 * @throws Exception if sig is missing or user is not instructor
 	 */
 	String viewTopicSelectForm(HttpServletRequest request) throws Exception {
-		String sig = request.getParameter(PARAM_SIG);
+		String sig = request.getParameter("sig");
 		if (sig == null || sig.isEmpty()) {
 			throw new IllegalArgumentException("Missing required parameter: sig");
 		}
@@ -788,44 +573,44 @@ public class Exercises extends HttpServlet {
 			throw new Exception("Assignment not found");
 		}
 		
-		StringBuilder buf = new StringBuilder(Util.head(TITLE_SELECT_TOPICS));
-		buf.append(Util.banner).append(HEADING_SELECT_TOPICS);
+		StringBuilder buf = new StringBuilder(Util.head("Select Topics"));
+		buf.append(Util.banner + "<h1>Select Topics for Assignment</h1>");
 		
-		buf.append("<form method=").append(FORM_METHOD_POST).append(" action=/exercises>")
-		   .append("<input type=").append(INPUT_TYPE_HIDDEN).append(" name=").append(PARAM_SIG).append(" value=").append(user.getTokenSignature()).append(" />")
-		   .append("<input type=").append(INPUT_TYPE_HIDDEN).append(" name=").append(PARAM_USER_REQUEST).append(" value=").append(USER_REQUEST_ASSIGN_TOPICS).append(" />")
-		   .append("<input type=").append(INPUT_TYPE_SUBMIT).append(" class='").append(CSS_CLASS_BTN_PRIMARY).append("' value='").append(BTN_ASSIGN_TOPICS).append("' /> ")
-		   .append("<a class='").append(CSS_CLASS_BTN_PRIMARY).append("' href=/exercises?UserRequest=").append(USER_REQUEST_INSTRUCTOR_PAGE).append("&sig=").append(user.getTokenSignature()).append(">").append(BTN_QUIT).append("</a><br/><br/>")
-		   .append("<ul style='list-style: none;'>");
+		buf.append("<form method='post' action=/exercises>" +
+		   "<input type='hidden' name='sig' value='" + user.getTokenSignature() + "' />" +
+		   "<input type='hidden' name='UserRequest' value='AssignTopics' />" +
+		   "<input type='submit' class='btn btn-primary' value='Assign Topics' /> " +
+		   "<a class='btn btn-primary' href=/exercises?UserRequest=InstructorPage&sig=" + user.getTokenSignature() + ">Quit</a><br/><br/>" +
+		   "<ul style='list-style: none;'>");
 		
 		List<APChemUnit> units = ofy().load().type(APChemUnit.class).order("unitNumber").list();
 		for (APChemUnit u : units) {
 			if (u == null) continue;
-			buf.append("<li><label><input type=").append(INPUT_TYPE_CHECKBOX).append(" class=").append(CSS_CLASS_UNIT_CHECKBOX).append(" id=").append(u.id)
-			   .append(" value=").append(u.id).append(" onclick=").append(JS_FUNC_UNIT_CLICKED).append("('").append(u.id).append("');")
-			   .append(" /> <b>Unit ").append(u.unitNumber).append(" - ").append(u.title).append("</b></label></li>")
-			   .append("<ul style='list-style: none;'>");
+			buf.append("<li><label><input type='checkbox' class='unit-checkbox' id=" + u.id +
+			   " value=" + u.id + " onclick=\"unitClicked('" + u.id + "');\"" +
+			   " /> <b>Unit " + u.unitNumber + " - " + u.title + "</b></label></li>" +
+			   "<ul style='list-style: none;'>");
 			
 			List<APChemTopic> topics = ofy().load().type(APChemTopic.class).filter("unitId", u.id).order("topicNumber").list();
 			for (APChemTopic t : topics) {
 				if (t == null) continue;
-				buf.append("<li class='").append(CSS_CLASS_LIST_PREFIX).append(u.id).append("'>")
-				   .append("<label><input type=").append(INPUT_TYPE_CHECKBOX).append(" class=").append(CSS_CLASS_UNIT_PREFIX).append(u.id)
-				   .append(" name=").append(PARAM_TOPIC_ID).append(" value=").append(t.id).append(" ");
+				buf.append("<li class='list-unit-" + u.id + "'>" +
+				   "<label><input type='checkbox' class='unit-" + u.id +
+				   " name='topicId' value=" + t.id + " ");
 				if (a.topicIds.contains(t.id)) {
 					buf.append("checked");
 				}
-				buf.append(" onclick=").append(JS_FUNC_TOPIC_CLICKED).append("('").append(u.id).append("')")
-				   .append(" /> ").append(t.title).append("</label>")
-				   .append("</li>");
+				buf.append(" onclick=\"topicClicked('" + u.id + "')\"" +
+				   " /> " + t.title + "</label>" +
+				   "</li>");
 			}
 			buf.append("</ul>");
 		}
 		
-		buf.append("</ul>")
-		   .append("<input type=").append(INPUT_TYPE_SUBMIT).append(" class='").append(CSS_CLASS_BTN_PRIMARY).append("' value='").append(BTN_ASSIGN_TOPICS).append("' /> ")
-		   .append("<a class='").append(CSS_CLASS_BTN_PRIMARY).append("' href=/exercises?UserRequest=").append(USER_REQUEST_INSTRUCTOR_PAGE).append("&sig=").append(user.getTokenSignature()).append(">").append(BTN_QUIT).append("</a><br/>")
-		   .append("</form>");
+		buf.append("</ul>" +
+		   "<input type='submit' class='btn btn-primary' value='Assign Topics' /> " +
+		   "<a class='btn btn-primary' href=/exercises?UserRequest=InstructorPage&sig=" + user.getTokenSignature() + ">Quit</a><br/>" +
+		   "</form>");
 		
 		buf.append(buildTopicSelectionScript());
 		return buf.toString() + Util.foot();
@@ -844,48 +629,48 @@ public class Exercises extends HttpServlet {
 	 */
 	String buildTopicSelectionScript() {
 		StringBuilder script = new StringBuilder();
-		script.append("\n<script>\n");
-		script.append("// Initialize topic selection form state\n");
-		script.append("var unitBoxes = document.querySelectorAll('input.").append(CSS_CLASS_UNIT_CHECKBOX).append("');\n");
-		script.append("var topicBoxes, checkAll, checkedCount;\n");
-		script.append("for (var ").append(JS_INDEX_VAR).append("=0;").append(JS_INDEX_VAR).append("<unitBoxes.length;").append(JS_INDEX_VAR).append("++) {\n");
-		script.append("  topicBoxes = document.querySelectorAll('input.").append(CSS_CLASS_UNIT_PREFIX).append("' + unitBoxes[").append(JS_INDEX_VAR).append("].id);\n");
-		script.append("  checkAll = document.getElementById(unitBoxes[").append(JS_INDEX_VAR).append("].id);\n");
-		script.append("  checkedCount = document.querySelectorAll('input.").append(CSS_CLASS_UNIT_PREFIX).append("' + unitBoxes[").append(JS_INDEX_VAR).append("].id + ':checked').length;\n");
-		script.append("  checkAll.checked = checkedCount>0;\n");
-		script.append("  checkAll.indeterminate = checkedCount>0 && checkedCount<topicBoxes.length;\n");
-		script.append("  var listItems = document.querySelectorAll('li.").append(CSS_CLASS_LIST_PREFIX).append("' + unitBoxes[").append(JS_INDEX_VAR).append("].id);\n");
-		script.append("  for (var ").append(JS_INNER_INDEX_VAR).append("=0;").append(JS_INNER_INDEX_VAR).append("<listItems.length;").append(JS_INNER_INDEX_VAR).append("++) {\n");
-		script.append("    listItems[").append(JS_INNER_INDEX_VAR).append("].style='").append(CSS_DISPLAY_LIST_ITEM).append("' + (checkedCount>0?'list-item':'none');\n");
-		script.append("  }\n");
-		script.append("}\n");
-		script.append("\n// Handle topic checkbox change\n");
-		script.append("function ").append(JS_FUNC_TOPIC_CLICKED).append("(unitId) {\n");
-		script.append("  var topicCount = document.querySelectorAll('input.").append(CSS_CLASS_UNIT_PREFIX).append("' + unitId).length;\n");
-		script.append("  var checkedCount = document.querySelectorAll('input.").append(CSS_CLASS_UNIT_PREFIX).append("' + unitId + ':checked').length;\n");
-		script.append("  var checkAll = document.getElementById(unitId);\n");
-		script.append("  checkAll.checked = checkedCount>0;\n");
-		script.append("  checkAll.indeterminate = checkedCount>0 && checkedCount<topicCount;\n");
-		script.append("  if (checkedCount==0) {\n");
-		script.append("    var listItems = document.querySelectorAll('li.").append(CSS_CLASS_LIST_PREFIX).append("' + unitId);\n");
-		script.append("    for (var ").append(JS_INNER_INDEX_VAR).append("=0;").append(JS_INNER_INDEX_VAR).append("<listItems.length;").append(JS_INNER_INDEX_VAR).append("++) {\n");
-		script.append("      listItems[").append(JS_INNER_INDEX_VAR).append("].style='").append(CSS_DISPLAY_NONE).append("';\n");
-		script.append("    }\n");
-		script.append("  }\n");
-		script.append("}\n");
-		script.append("\n// Handle unit checkbox change\n");
-		script.append("function ").append(JS_FUNC_UNIT_CLICKED).append("(unitId) {\n");
-		script.append("  var unitBox = document.getElementById(unitId);\n");
-		script.append("  var listItems = document.querySelectorAll('li.").append(CSS_CLASS_LIST_PREFIX).append("' + unitId);\n");
-		script.append("  var topicBoxes = document.querySelectorAll('input.").append(CSS_CLASS_UNIT_PREFIX).append("' + unitId);\n");
-		script.append("  for (var ").append(JS_INDEX_VAR).append("=0;").append(JS_INDEX_VAR).append("<topicBoxes.length;").append(JS_INDEX_VAR).append("++) {\n");
-		script.append("    topicBoxes[").append(JS_INDEX_VAR).append("].checked = unitBox.checked;\n");
-		script.append("    if (").append(JS_INDEX_VAR).append(" < listItems.length) {\n");
-		script.append("      listItems[").append(JS_INDEX_VAR).append("].style='").append(CSS_DISPLAY_LIST_ITEM).append("';\n");
-		script.append("    }\n");
-		script.append("  }\n");
-		script.append("}\n");
-		script.append("</script>\n");
+		script.append("\n<script>\n" +
+		"// Initialize topic selection form state\n" +
+		"var unitBoxes = document.querySelectorAll('input.unit-checkbox');\n" +
+		"var topicBoxes, checkAll, checkedCount;\n" +
+		"for (var i=0;i<unitBoxes.length;i++) {\n" +
+		"  topicBoxes = document.querySelectorAll('input.unit-' + unitBoxes[i].id);\n" +
+		"  checkAll = document.getElementById(unitBoxes[i].id);\n" +
+		"  checkedCount = document.querySelectorAll('input.unit-' + unitBoxes[i].id + ':checked').length;\n" +
+		"  checkAll.checked = checkedCount>0;\n" +
+		"  checkAll.indeterminate = checkedCount>0 && checkedCount<topicBoxes.length;\n" +
+		"  var listItems = document.querySelectorAll('li.list-unit-' + unitBoxes[i].id);\n" +
+		"  for (var j=0;j<listItems.length;j++) {\n" +
+		"    listItems[j].style='display:' + (checkedCount>0?'list-item':'none');\n" +
+		"  }\n" +
+		"}\n" +
+		"\n// Handle topic checkbox change\n" +
+		"function topicClicked(unitId) {\n" +
+		"  var topicCount = document.querySelectorAll('input.unit-' + unitId).length;\n" +
+		"  var checkedCount = document.querySelectorAll('input.unit-' + unitId + ':checked').length;\n" +
+		"  var checkAll = document.getElementById(unitId);\n" +
+		"  checkAll.checked = checkedCount>0;\n" +
+		"  checkAll.indeterminate = checkedCount>0 && checkedCount<topicCount;\n" +
+		"  if (checkedCount==0) {\n" +
+		"    var listItems = document.querySelectorAll('li.list-unit-' + unitId);\n" +
+		"    for (var j=0;j<listItems.length;j++) {\n" +
+		"      listItems[j].style='display:none';\n" +
+		"    }\n" +
+		"  }\n" +
+		"}\n" +
+		"\n// Handle unit checkbox change\n" +
+		"function unitClicked(unitId) {\n" +
+		"  var unitBox = document.getElementById(unitId);\n" +
+		"  var listItems = document.querySelectorAll('li.list-unit-' + unitId);\n" +
+		"  var topicBoxes = document.querySelectorAll('input.unit-' + unitId);\n" +
+		"  for (var i=0;i<topicBoxes.length;i++) {\n" +
+		"    topicBoxes[i].checked = unitBox.checked;\n" +
+		"    if (i < listItems.length) {\n" +
+		"      listItems[i].style='display:list-item';\n" +
+		"    }\n" +
+		"  }\n" +
+		"}\n" +
+		"</script>\n");
 		return script.toString();
 	}
 	
@@ -906,7 +691,7 @@ public class Exercises extends HttpServlet {
 	 * @throws Exception if sig is missing or user is not instructor
 	 */
 	String reviewScores(HttpServletRequest request) throws Exception {
-		String sig = request.getParameter(PARAM_SIG);
+		String sig = request.getParameter("sig");
 		if (sig == null || sig.isEmpty()) {
 			throw new IllegalArgumentException("Missing required parameter: sig");
 		}
@@ -923,21 +708,21 @@ public class Exercises extends HttpServlet {
 			throw new Exception("Assignment not found");
 		}
 		
-		StringBuilder buf = new StringBuilder(Util.head(TITLE_REVIEW_SCORES));
-		buf.append(Util.banner).append(HEADING_SCORES);
+		StringBuilder buf = new StringBuilder(Util.head("Review Student Scores"));
+		buf.append(Util.banner + "<h1>Scores</h1>");
 		
-		buf.append("<h2>").append(a.title == null ? "" : a.title).append("</h2>");
-		buf.append("Valid: ").append(new Date()).append("<p>");
+		buf.append("<h2>" + (a.title == null ? "" : a.title) + "</h2>");
+		buf.append("Valid: " + new Date() + "<p>");
 		
 		try {
 			if (a.lti_nrps_context_memberships_url == null) {
 				throw new Exception("No Names and Roles Provisioning support.");
 			}
 
-			buf.append(HELP_NRPS)
-			   .append("<p>")
-			   .append("<a href=/exercises?UserRequest=").append(USER_REQUEST_INSTRUCTOR_PAGE).append("&sig=").append(user.getTokenSignature())
-			   .append(">").append(LINK_RETURN_TO_INSTRUCTOR).append("</a><br/><br/>");
+			buf.append("<p><strong>About NRPS:</strong> This page uses the LTI Names and Roles Provisioning Service (NRPS) to retrieve your class roster from your Learning Management System.</p>" +
+			   "<p>" +
+			   "<a href=/exercises?UserRequest=InstructorPage&sig=" + user.getTokenSignature() +
+			   ">Return to Instructor Page</a><br/><br/>");
 
 			Map<String, String> scores = LTIMessage.readMembershipScores(a);
 			if (scores == null) {
@@ -963,7 +748,7 @@ public class Exercises extends HttpServlet {
 				keys.put(id, key(key(User.class, Util.hashId(platform_id + id)), Score.class, a.id));
 			}
 			Map<Key<Score>, Score> cvScores = ofy().load().keys(keys.values());
-			buf.append(TABLE_HEADER_OPEN);
+			buf.append("<table border=1 align=center>");
 			int i = 0;
 			boolean synched = true;
 			for (Map.Entry<String, String[]> entry : membership.entrySet()) {
@@ -977,28 +762,28 @@ public class Exercises extends HttpServlet {
 					continue;
 				}
 				i++;
-				buf.append("<tr><td>").append(i).append(".&nbsp;</td>")
-				   .append("<td>").append(roleInfo[1]).append("</td>")
-				   .append("<td>").append(roleInfo[2]).append("</td>")
-				   .append("<td>").append(roleInfo[0]).append("</td>")
-				   .append("<td ").append(TABLE_ALIGN_CENTER).append(">").append(s == null ? SCORE_NOT_AVAILABLE : s + SCORE_FORMAT_PERCENT).append("</td>")
-				   .append("<td ").append(TABLE_ALIGN_CENTER).append(">").append(cvScore == null ? SCORE_NOT_AVAILABLE : cvScore.maxScore + SCORE_FORMAT_PERCENT).append("</td>")
-				   .append("</tr>");
+buf.append("<tr><td>" + i + ".&nbsp;</td>" +
+			   "<td>" + roleInfo[1] + "</td>" +
+			   "<td>" + roleInfo[2] + "</td>" +
+			   "<td>" + roleInfo[0] + "</td>" +
+			   "<td align=center>" + (s == null ? "Score not available" : s + "%") + "</td>" +
+			   "<td align=center>" + (cvScore == null ? "Score not available" : cvScore.maxScore + "%") + "</td>" +
+			   "</tr>");
 				
 				synched = synched && 
-						(!LTI_ROLE_LEARNER.equals(roleInfo[0]) || 
+						(!"Learner".equals(roleInfo[0]) || 
 						(cvScore == null || Double.valueOf(cvScore.maxScore).equals(Double.parseDouble(s))));
 			}
 			buf.append("</table><br/>");
 			if (!synched) {
-				buf.append(HELP_SYNC_SCORES)
-				   .append("<br/>")
-				   .append("<form method=").append(FORM_METHOD_POST).append(" action=/exercises >")
-				   .append("<input type=").append(INPUT_TYPE_HIDDEN).append(" name=").append(PARAM_SIG).append(" value=").append(user.getTokenSignature()).append(" />")
-				   .append("<input type=").append(INPUT_TYPE_HIDDEN).append(" name=").append(PARAM_USER_REQUEST).append(" value='").append(USER_REQUEST_SYNCHRONIZE_SCORES).append("' />")
-				   .append("<input id=syncsubmit type=").append(INPUT_TYPE_SUBMIT).append(" class='").append(CSS_CLASS_BTN_PRIMARY).append("' value='").append(BTN_SYNCHRONIZE).append("' ")
-				   .append("onclick=").append(ONCLICK_SYNC_HIDE).append(" />")
-				   .append("</form>");
+				buf.append("<p><strong>Sync Scores:</strong> Your ChemVantage scores are not synchronized with your Learning Management System. Click the button below to send them to the LMS.</p>" +
+				   "<br/>" +
+				   "<form method='post' action=/exercises >" +
+				   "<input type='hidden' name='sig' value='" + user.getTokenSignature() + "' />" +
+				   "<input type='hidden' name='UserRequest' value='SynchronizeScores' />" +
+				   "<input id=syncsubmit type='submit' class='btn btn-primary' value='Synchronize Scores' " +
+				   "onclick=\"document.getElementById('syncsubmit').style='display:none'; return true;\" />" +
+				   "</form>");
 			}
 			return buf.toString() + Util.foot();
 		} catch (Exception e) {
@@ -1021,7 +806,7 @@ public class Exercises extends HttpServlet {
 	 * @throws Exception if user is not instructor, LMS is not configured for AGS/NRPS, or sig is missing
 	 */
 	String synchronizeScores(HttpServletRequest request) throws Exception {
-		String sig = request.getParameter(PARAM_SIG);
+		String sig = request.getParameter("sig");
 		if (sig == null || sig.isEmpty()) {
 			throw new IllegalArgumentException("Missing required parameter: sig");
 		}
@@ -1059,7 +844,7 @@ public class Exercises extends HttpServlet {
 			if (cvScore==null) continue;
 			String s = scores.get(entry.getKey());
 			if (String.valueOf(cvScore.maxScore).equals(s)) continue;  // the scores match (good!)
-			Util.createTask(PATH_REPORT,TASK_PARAM_ASSIGNMENT_ID + a.id + TASK_PARAM_USER_ID + URLEncoder.encode(platform_id + entry.getKey(),URL_ENCODING));
+			Util.createTask("/report","a=" + a.id + "&u=" + URLEncoder.encode(platform_id + entry.getKey(),"UTF-8"));
 		}
 		return instructorPage(user,a);
 	}
