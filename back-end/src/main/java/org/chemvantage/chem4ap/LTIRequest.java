@@ -74,12 +74,11 @@ public class LTIRequest extends HttpServlet {
 			if (sig != null) {  // instructor returning with chosen assignment
 				user = User.getUser(sig);
 				if (user==null) throw new Exception("Invalid or expired User entity.");
-			} else {  // new DeepLinking request
+			} else {  // new LtiResourceLinkRequest or LtiDeepLinkingRequest
 				String state = request.getParameter("state");
 				if (state==null) throw new Exception("state parameter was missing"); 
 				validateStateToken(iss, state); // ensures proper OIDC authorization flow completed							
 				user = validateUserClaims(claims);
-				//user.setToken();
 			}
 			
 			// request is for ResourceLink or DeepLinking?
@@ -110,7 +109,20 @@ public class LTIRequest extends HttpServlet {
 				if (user.isInstructor()) {
 					out.println(Exercises.instructorPage(user,a));
 				} else {
-					response.sendRedirect(Util.getServerUrl() + "/exercises/index.html?t=" + Util.getToken(user.getTokenSignature()));
+					// Check if user is premium
+					if (!user.isPremium()) {
+						if (d.nLicensesRemaining > 0) { // Allocate 1 license to this user
+							d.nLicensesRemaining--;
+							ofy().save().entity(d).now();
+							new PremiumUser(user.hashedId,12,0,d.organization,"allocated by deployment");
+						} else if (d.price == 0) { // Free deployment, create a free premium user
+							new PremiumUser(user.hashedId,12,0,d.organization,"free deployment");
+						} else { // Not premium, redirect to checkout
+							response.sendRedirect(Util.getServerUrl() + "/checkout?sig=" + user.getTokenSignature() + "&d=" + d.platform_deployment_id);
+						}
+					} else {
+						response.sendRedirect(Util.getServerUrl() + "/exercises/index.html?t=" + Util.getToken(user.getTokenSignature()));
+					}
 				}
 				break;
 			default: throw new Exception("The LTI message_type claim " + message_type.getAsString() + " is not supported.");
